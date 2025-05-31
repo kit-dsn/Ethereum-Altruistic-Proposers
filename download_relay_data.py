@@ -2,7 +2,7 @@ import requests
 import time
 import logging
 import pandas as pd
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Float, Index
+from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index
 from sqlalchemy.dialects.postgresql import insert
 
 URL = "https://boost-relay.flashbots.net"
@@ -47,6 +47,8 @@ def upload_data(slots):
 
         if col_name == "slot":
             columns.append(Column(col_name, col_type, unique=True))
+        elif col_name == "value":
+            columns.append(Column(col_name, Numeric))
         else:
             columns.append(Column(col_name, col_type))
     
