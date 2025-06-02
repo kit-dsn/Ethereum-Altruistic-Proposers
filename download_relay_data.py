@@ -1,14 +1,24 @@
 import requests
 import time
 import logging
+import argparse
 import pandas as pd
 from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index
 from sqlalchemy.dialects.postgresql import insert
 
-URL = "https://boost-relay.flashbots.net"
+argparser = argparse.ArgumentParser(
+    prog="Download Relay Data",
+    description="Downloads proposer_payload_delivered from relay API and stores results inside PSQL database"
+)
+argparser.add_argument('url')
+argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
+argparser.add_argument('table')
 
-DB = "postgresql://root@rfc.incus.tamedfox.eu/rfc"
-DB_TABLE = "relay_flashbots"
+args = argparser.parse_args()
+
+URL = args.url
+DB = args.database
+DB_TABLE = args.table
 
 def query_payloads(idx_slot, relay, limit):
     r = requests.get(f"{relay}/relay/v1/data/bidtraces/proposer_payload_delivered?cursor={idx_slot}&limit={limit}")
@@ -55,8 +65,8 @@ def upload_data(slots):
     table = Table(DB_TABLE, 
                   metadata, 
                   *columns, 
-                  Index("ix_slot", "slot"),
-                  Index("ix_block_number", "block_number")
+                  Index(f"ix_{DB_TABLE}_slot", "slot"),
+                  Index(f"ix_{DB_TABLE}_block_number", "block_number")
         )
     
     engine = create_engine(DB)
