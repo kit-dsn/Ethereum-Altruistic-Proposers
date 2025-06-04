@@ -12,6 +12,7 @@ argparser = argparse.ArgumentParser(
 )
 argparser.add_argument('url')
 argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
+argparser.add_argument('--start', type=int, default=11602798)
 argparser.add_argument('table')
 
 args = argparser.parse_args()
@@ -21,23 +22,27 @@ DB = args.database
 DB_TABLE = args.table
 
 def query_payloads(idx_slot, relay, limit):
-    r = requests.get(f"{relay}/relay/v1/data/bidtraces/proposer_payload_delivered?cursor={idx_slot}&limit={limit}")
+    while True:
+        try:
+            r = requests.get(f"{relay}/relay/v1/data/bidtraces/proposer_payload_delivered?cursor={idx_slot}&limit={limit}")
 
-
-    slots = []
-    for s in r.json():
-        slots.append({
-            "slot": int(s["slot"]),
-            "block_number": int(s["block_number"]),
-            "block_hash": s["parent_hash"],
-            "builder_pk": s["builder_pubkey"],
-            "proposer_pk": s["proposer_pubkey"],
-            "proposer_fee_recipient": s["proposer_fee_recipient"],
-            "gas_limit": int(s["gas_limit"]),
-            "gas_used": int(s["gas_used"]),
-            "value": int(s["value"]),
-            "num_tx": int(s["num_tx"])
-        })
+            slots = []
+            for s in r.json():
+                slots.append({
+                    "slot": int(s["slot"]),
+                    "block_number": int(s["block_number"]),
+                    "block_hash": s["parent_hash"],
+                    "builder_pk": s["builder_pubkey"],
+                    "proposer_pk": s["proposer_pubkey"],
+                    "proposer_fee_recipient": s["proposer_fee_recipient"],
+                    "gas_limit": int(s["gas_limit"]),
+                    "gas_used": int(s["gas_used"]),
+                    "value": int(s["value"]),
+                    "num_tx": int(s["num_tx"])
+            })
+            break
+        except:
+            time.sleep(60)
 
     df = pd.DataFrame(slots)
     return df
@@ -77,7 +82,7 @@ def upload_data(slots):
         conn.execute(table.insert(), slots.to_dict('records'))
 
 
-SLOT_CURRENT = 11602798
+SLOT_CURRENT = args.start
 SLOT_MIN = 10738799
 
 logger = logging.getLogger(__name__)
