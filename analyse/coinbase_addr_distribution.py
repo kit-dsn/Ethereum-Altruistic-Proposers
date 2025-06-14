@@ -49,14 +49,14 @@ plt.close(fig)
 
 
 # line-chart (cdf)
-
 grouped = df.groupby('count')['amount'].sum().sort_index()
+print(grouped)
 cdf = grouped.cumsum()
 cdf_normalized = cdf / cdf.iloc[-1]
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 ax.plot(cdf_normalized.index, cdf_normalized.values, marker='o')
-ax.axhline(y=0.1, color='blue', linestyle='--', linewidth=1)
-ax.axvline(x=cdf_normalized[cdf_normalized >= 0.1].index[0], color='blue', linestyle='--', linewidth=1)
+ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
+ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
 fig.savefig("charts/coinbase_addr_distribution-line-chart.png")
