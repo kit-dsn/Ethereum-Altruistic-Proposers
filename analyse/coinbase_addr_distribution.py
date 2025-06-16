@@ -13,7 +13,7 @@ with engine.connect() as connection:
     df = pd.read_sql(sql_query, connection)
 
 
-# generate pie chart
+# generate pie chart (slots)
 y = np.array([
     int(df[df["count"] > 1]["amount"].sum()), # coinbase_addresses used by more than one validator
     int(df[df["count"] <= 1]["amount"].sum()) # coinbase_addresses used by only one validator
@@ -31,7 +31,28 @@ ax.set_title("Coinbase Uniqueness")
 ax.legend(wedges, labels,
           loc="lower center")
 
-fig.savefig("charts/coinbase_addr_distribution.png")
+fig.savefig("charts/coinbase_addr_distribution-slots.png")
+plt.close(fig)
+
+# generate pie chart (validators)
+y = np.array([
+    int(df[df["count"] > 1]["count"].sum()), # coinbase_addresses used by more than one validator
+    int(df[df["count"] <= 1]["count"].sum()) # coinbase_addresses used by only one validator
+])
+labels = ["Reused coinbase addresses", "Unique coinbase addresses"]
+explode = [0.0, 0.1]
+
+def writing(pct, allvals):
+    absolute = int(np.round(pct/100.*np.sum(allvals)))
+    return f"{pct:.1f}%\n({absolute:d} validators)"
+
+fig, ax = plt.subplots(nrows=1, ncols=1)
+wedges, texts, autotexts = ax.pie(y, explode=explode, autopct=lambda pct: writing(pct, y), textprops=dict(color="w"))
+ax.set_title("Coinbase Uniqueness")
+ax.legend(wedges, labels,
+          loc="lower center")
+
+fig.savefig("charts/coinbase_addr_distribution-validators.png")
 plt.close(fig)
 
 # generate bar chart
