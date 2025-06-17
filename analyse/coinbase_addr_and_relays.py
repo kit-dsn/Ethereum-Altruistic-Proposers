@@ -16,10 +16,7 @@ sql_query = """
     ) a INNER JOIN (
         SELECT coinbase_addr, count(DISTINCT relay_all.block_number) as relay_block_count 
         FROM relay_all 
-        INNER JOIN coinbase_blocks_all ON (coinbase_blocks_all.block_number = relay_all.block_number) 
-        WHERE 
-            relay_all.block_number >= (SELECT min(block_number) FROM coinbase_blocks_all) AND 
-            relay_all.block_number <= (SELECT max(block_number) FROM coinbase_blocks_all) 
+        RIGHT JOIN coinbase_blocks_all ON (coinbase_blocks_all.block_number = relay_all.block_number) 
         GROUP BY coinbase_addr 
     ) b ON (a.coinbase_addr = b.coinbase_addr)
     ORDER BY a.validator_count;
