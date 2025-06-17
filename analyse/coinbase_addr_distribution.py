@@ -31,7 +31,7 @@ ax.set_title("Coinbase Uniqueness")
 ax.legend(wedges, labels,
           loc="lower center")
 
-fig.savefig("charts/coinbase_addr_distribution-slots.png")
+fig.savefig("out/coinbase_addr_distribution-slots.png")
 plt.close(fig)
 
 # generate pie chart (validators)
@@ -52,7 +52,7 @@ ax.set_title("Coinbase Uniqueness")
 ax.legend(wedges, labels,
           loc="lower center")
 
-fig.savefig("charts/coinbase_addr_distribution-validators.png")
+fig.savefig("out/coinbase_addr_distribution-validators.png")
 plt.close(fig)
 
 # generate bar chart
@@ -65,7 +65,7 @@ for i in range(1, 20):
 fig, ax = plt.subplots(nrows=1, ncols=1)
 ax.bar(x, y)
 ax.set_xticks(x)
-fig.savefig("charts/coinbase_addr_distribution-bar-chart.png")
+fig.savefig("out/coinbase_addr_distribution-bar-chart.png")
 plt.close(fig)
 
 
@@ -80,4 +80,4 @@ ax.plot(cdf_normalized.index, cdf_normalized.values, marker='o')
 ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
 ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
-fig.savefig("charts/coinbase_addr_distribution-line-chart.png")
+fig.savefig("out/coinbase_addr_distribution-line-chart.png")

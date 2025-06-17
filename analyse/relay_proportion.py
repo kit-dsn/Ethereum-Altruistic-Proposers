@@ -29,5 +29,5 @@ wedges, texts, autotexts = ax.pie(y, explode=explode, autopct=lambda pct: writin
 ax.set_title("Blocks announced from relays")
 ax.legend(wedges, labels, loc="lower center")
 
-fig.savefig("charts/relay_proportion-bar-chart.png")
+fig.savefig("out/relay_proportion-bar-chart.png")
 plt.close(fig)

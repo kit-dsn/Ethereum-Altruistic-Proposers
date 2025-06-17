@@ -47,4 +47,4 @@ ax.scatter(cdf_normalized.index, cdf_normalized.values, marker='o', c=fraction_r
 ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
 ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
-fig.savefig("charts/coinbase_addr_and_relays-scatter.png")
+fig.savefig("out/coinbase_addr_and_relays-scatter.png")
