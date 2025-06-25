@@ -81,3 +81,6 @@ ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
 ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
 fig.savefig("out/coinbase_addr_distribution-line-chart.png")
+
+ax.set_yscale('log')
+fig.savefig("out/coinbase_addr_distribution-line-chart-log.png")

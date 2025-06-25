@@ -39,10 +39,13 @@ green_red_cmap = LinearSegmentedColormap.from_list('BlueRed', ['blue', 'red'])
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 ax.scatter(cdf_normalized.index, cdf_normalized.values, marker='o', c=fraction_relay, cmap=green_red_cmap)
+ax.plot(cdf_normalized.index, cdf_normalized.values, color="black")
 ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
 ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
 fig.savefig("out/coinbase_addr_and_relays-scatter.png")
+ax.set_yscale('log')
+fig.savefig("out/coinbase_addr_and_relays-scatter-log.png")
 
 # graph of validator addresses
 
