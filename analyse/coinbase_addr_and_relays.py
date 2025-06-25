@@ -3,8 +3,7 @@ import numpy as np
 from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-
-engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
+import utils.query
 
 sql_query = """
     SELECT a.coinbase_addr, a.validator_count, a.block_count, b.relay_block_count FROM    
@@ -22,8 +21,7 @@ sql_query = """
     ORDER BY a.validator_count;
 """
 
-with engine.connect() as connection:
-    df = pd.read_sql(sql_query, connection)
+df = utils.query.query_cache(sql_query)
 
 print(df)
 
