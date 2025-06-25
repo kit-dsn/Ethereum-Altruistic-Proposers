@@ -40,6 +40,8 @@ y = np.array([
 ])
 labels = ["No Relays", "Always Relays", "Sometimes Relays"]
 
+assert y.sum() == len(df_all_proposer)
+
 def writing(pct, allvals):
     absolute = int(np.round(pct/100.*np.sum(allvals)))
     return f"{pct:.1f}%\n({absolute:d} validators)"
