@@ -52,3 +52,33 @@ ax.legend(wedges, labels,
 
 fig.savefig("out/proposer_collaboration-relaying-pie.png")
 plt.close(fig)
+
+# what coinbase addresses are used by validators that *sometimes* use relays?
+df_sometimes_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots'] != df_relay_proposer['slots']]
+sometimes_relay_proposer_idxs = ",".join(df_sometimes_relay_proposer.proposer_index.apply(str))
+
+df_sometimes_relay_proposer_coinbase = utils.query.query_cache(f"""
+    SELECT
+        coinbase_addr,
+        COUNT(DISTINCT a.block_number) as count,
+        COUNT(DISTINCT b.block_number) as relay_count
+    FROM
+    (
+        SELECT
+            proposer_index,
+            block_number,
+            coinbase_addr
+        FROM coinbase_blocks_all
+        WHERE proposer_index IN ({sometimes_relay_proposer_idxs})
+    ) a
+    LEFT JOIN (
+        SELECT DISTINCT block_number FROM relay_all
+    ) b ON (a.block_number = b.block_number)
+    GROUP BY a.coinbase_addr
+    ORDER BY count DESC
+""")
+
+assert len(df_sometimes_relay_proposer_coinbase[df_sometimes_relay_proposer_coinbase['count'] < df_sometimes_relay_proposer_coinbase['relay_count']]) == 0
+
+
+print(df_sometimes_relay_proposer_coinbase)
