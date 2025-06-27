@@ -19,7 +19,7 @@ df_relay_proposer = utils.query.query_cache("""
         COUNT(DISTINCT coinbase_addr) as coinbase_addrs,
         COUNT(coinbase_blocks_all.slot) as slots
     FROM coinbase_blocks_all
-    INNER JOIN relay_all ON (coinbase_blocks_all.block_number = relay_all.block_number)
+    INNER JOIN (SELECT DISTINCT block_number from relay_all) r ON (coinbase_blocks_all.block_number = r.block_number)
     GROUP BY proposer_index 
     ORDER BY COUNT(coinbase_blocks_all.slot) DESC
 """)
@@ -31,6 +31,7 @@ df_relay_proposer = df_relay_proposer.rename(columns={"coinbase_addrs": "relay_c
 df_relay_proposer = df_relay_proposer.merge(df_all_proposer, left_on='proposer_index', right_on='proposer_index')
 
 assert len(df_no_relay_proposer) + len(df_relay_proposer) == len(df_all_proposer)
+assert len(df_relay_proposer[df_relay_proposer['relay_slots'] > df_relay_proposer['slots']]) == 0
 
 # print diagram of validators
 y = np.array([
@@ -57,30 +58,110 @@ plt.close(fig)
 
 # what coinbase addresses are used by validators that *sometimes* use relays?
 df_sometimes_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots'] != df_relay_proposer['slots']]
-sometimes_relay_proposer_idxs = ",".join(df_sometimes_relay_proposer.proposer_index.apply(str))
+df_always_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots'] == df_relay_proposer['slots']]
 
-df_sometimes_relay_proposer_coinbase = utils.query.query_cache(f"""
-    SELECT
-        coinbase_addr,
-        COUNT(DISTINCT a.block_number) as count,
-        COUNT(DISTINCT b.block_number) as relay_count
-    FROM
-    (
+def fetch_coinbase_addrs_used(df):
+    sometimes_relay_proposer_idxs = ",".join(df.proposer_index.apply(str))
+    return utils.query.query_cache(f"""
         SELECT
             proposer_index,
-            block_number,
-            coinbase_addr
-        FROM coinbase_blocks_all
-        WHERE proposer_index IN ({sometimes_relay_proposer_idxs})
-    ) a
-    LEFT JOIN (
-        SELECT DISTINCT block_number FROM relay_all
-    ) b ON (a.block_number = b.block_number)
-    GROUP BY a.coinbase_addr
-    ORDER BY count DESC
-""")
+            coinbase_addr,
+            COUNT(DISTINCT a.block_number) as count,
+            COUNT(DISTINCT b.block_number) as relay_count
+        FROM
+        (
+            SELECT
+                proposer_index,
+                block_number,
+                coinbase_addr
+            FROM coinbase_blocks_all
+            WHERE proposer_index IN ({sometimes_relay_proposer_idxs})
+        ) a
+        LEFT JOIN (
+            SELECT DISTINCT block_number FROM relay_all
+        ) b ON (a.block_number = b.block_number)
+        GROUP BY a.coinbase_addr, a.proposer_index
+        ORDER BY count DESC
+    """)
 
-assert len(df_sometimes_relay_proposer_coinbase[df_sometimes_relay_proposer_coinbase['count'] < df_sometimes_relay_proposer_coinbase['relay_count']]) == 0
+# find out which proposers used which coinbase addr
+# not showing up in relays...
 
+def reorg_proposer_index(df):
+    proposer_index_unique = list(df['proposer_index'].sort_values().unique())
+    proposer_index_unique = dict(zip(proposer_index_unique, range(1, len(proposer_index_unique) + 1)))
+    df['proposer_index'] = df.proposer_index.apply(lambda x: proposer_index_unique[x])
 
-print(df_sometimes_relay_proposer_coinbase)
+def add_coinbase_reoccurence(df):
+    vc = df['coinbase_addr'].value_counts().rename('rank')
+    vc = vc.sort_values().unique()
+    d = dict(zip(vc, range(1, len(vc) + 1)))
+    vc = df['coinbase_addr'].value_counts().apply(lambda x: d[x]).rename("rank")
+    return df.merge(vc, left_on="coinbase_addr", right_on="coinbase_addr")
+
+# plot these proposer - coinbase pairs
+
+CHECK_COUNT = 0
+
+# sometimes relaying proposers
+df = fetch_coinbase_addrs_used(df_sometimes_relay_proposer)
+CHECK_COUNT += df['count'].sum()
+assert len(df[df['count'] < df['relay_count']]) == 0
+assert df.proposer_index.isin(df_sometimes_relay_proposer.proposer_index).all()
+
+reorg_proposer_index(df)
+
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(60,20))
+coinbase_addr_translated = df['coinbase_addr'].apply(int, base=16)
+
+ax.scatter(df['proposer_index'], coinbase_addr_translated.values)
+ax.set_xticks([], [])
+ax.set_yticks([], [])
+ax.set_xlabel("\"Proposer Index\"")
+ax.set_ylabel("Coinbase Address")
+
+fig.savefig("out/proposer_collaboration-scatter-sometimes-relaying-proposers.png")
+
+# always relaying
+df = fetch_coinbase_addrs_used(df_always_relay_proposer)
+CHECK_COUNT += df['count'].sum()
+assert len(df[df['count'] < df['relay_count']]) == 0
+
+reorg_proposer_index(df)
+
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(60,20))
+coinbase_addr_translated = df['coinbase_addr'].apply(int, base=16)
+
+ax.scatter(df['proposer_index'], coinbase_addr_translated.values)
+ax.set_xticks([], [])
+ax.set_yticks([], [])
+ax.set_xlabel("\"Proposer Index\"")
+ax.set_ylabel("Coinbase Address")
+
+fig.savefig("out/proposer_collaboration-scatter-always-relaying-proposers.png")
+
+# never relaying
+df = fetch_coinbase_addrs_used(df_no_relay_proposer)
+CHECK_COUNT += df['count'].sum()
+df = add_coinbase_reoccurence(df)
+assert len(df[df['count'] < df['relay_count']]) == 0
+reorg_proposer_index(df)
+
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(60,20))
+coinbase_addr_translated = df['coinbase_addr'].apply(int, base=16)
+
+color_map = LinearSegmentedColormap.from_list('asdf', ['grey', 'b', 'r'])
+
+color = df['rank']/df['rank'].max()
+
+ax.scatter(df['proposer_index'], coinbase_addr_translated.values, c=color, cmap=color_map)
+ax.set_xticks([], [])
+ax.set_yticks([], [])
+ax.set_xlabel("\"Proposer Index\"")
+ax.set_ylabel("Coinbase Address")
+
+fig.savefig("out/proposer_collaboration-scatter-no-relaying-proposers.png")
+
+print(f"Check Count: {CHECK_COUNT}")
+print(f"Sum of Validators: {len(df_no_relay_proposer) + len(df_sometimes_relay_proposer) + len(df_always_relay_proposer)}")
+print(f"Sum slots: {df_no_relay_proposer.slots.sum() + df_sometimes_relay_proposer.slots.sum() + df_always_relay_proposer.slots.sum()}")
