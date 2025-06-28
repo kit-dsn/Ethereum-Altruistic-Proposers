@@ -63,6 +63,8 @@ for i in range(1, 20):
     x.append(i)
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
+ax.set_xlabel("Number of validators sharing coinbase address")
+ax.set_ylabel("Number of blocks")
 ax.bar(x, y)
 ax.set_xticks(x)
 fig.savefig("out/coinbase_addr_distribution-bar-chart.png")
