@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import utils.query
 
-sql_query = """
+df = utils.query.query_cache("""
     SELECT a.coinbase_addr, a.validator_count, a.block_count, b.relay_block_count FROM    
     (
         SELECT coinbase_addr, count(*) as validator_count, sum(repeat) as block_count 
@@ -19,11 +19,9 @@ sql_query = """
         GROUP BY coinbase_addr 
     ) b ON (a.coinbase_addr = b.coinbase_addr)
     ORDER BY a.validator_count;
-"""
+""")
 
-df = utils.query.query_cache(sql_query)
-
-print(df)
+assert len(df[df['block_count'] < df['relay_block_count']]) == 0
 
 # scatter (cdf)
 grouped = df.groupby('validator_count')
@@ -72,3 +70,57 @@ ax[1].set_xlabel("Combined")
 
 fig.tight_layout()
 fig.savefig("out/coinbase_addr_and_relays-real-scatter.png")
+
+# export data
+df.to_json("out/coinbase_addr_and_relays-coinbase-data.json")
+
+# show size of clusters
+df_groupby_validator_count = df.groupby('validator_count')
+cluster_size_df = df_groupby_validator_count['coinbase_addr'].count()
+y = cluster_size_df.values
+x = cluster_size_df.index
+
+cluster_relay_fraction = df_groupby_validator_count['relay_block_count'].sum() / df_groupby_validator_count['block_count'].sum()
+
+
+# inspired from https://stackoverflow.com/questions/66988956/how-to-create-a-customizednon-linear-not-log-x-axis-in-plot
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, gridspec_kw={'wspace': 0}, figsize=(30,5), width_ratios=[0.4,0.4,0.2])
+
+ax1.spines.right.set_visible(False)
+ax2.spines.left.set_visible(False)
+ax2.spines.right.set_visible(False)
+ax3.spines.left.set_visible(False)
+
+
+xlim1 = (0, 80)
+xlim2 = (80, 1150)
+xlim3 = (1150, 300000)
+
+ax1.axvline(xlim1[1], clip_on=False, color='gray')
+ax2.axvline(xlim2[1], clip_on=False, color='gray')
+
+ax1.scatter(x, y, c=cluster_relay_fraction, cmap=green_red_cmap)
+ax2.scatter(x, y, c=cluster_relay_fraction, cmap=green_red_cmap)
+ax3.scatter(x, y, c=cluster_relay_fraction, cmap=green_red_cmap)
+ax3.set_xscale('log')
+ax1.set_xlim(xlim1)
+ax2.set_xlim(xlim2)
+ax3.set_xlim(xlim3)
+ax3.set_xticks([10**4, 10**5])
+
+
+ax1.spines[['right', 'top']].set_visible(False)
+ax2.spines[['left', 'right', 'top']].set_visible(False)
+ax3.spines[['left', 'right', 'top']].set_visible(False)
+
+ax1.set_yscale('log')
+ax2.set_yscale('log')
+ax3.set_yscale('log')
+ax2.set_yticks([], [])
+ax3.set_yticks([], [])
+
+ax2.set_xlabel("Number of Validators sharing Coinbase")
+ax1.set_ylabel("Number of Clusters")
+
+fig.savefig("out/coinbase_addr_and_relays-cluster-sizes.png")
+plt.close(fig)
