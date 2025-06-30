@@ -2,16 +2,25 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
+import utils.query
 
 engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
 
-sql_query = """
-SELECT coinbase_addr, count(*) as count, sum(repeat) as amount FROM (SELECT proposer_index, coinbase_addr, count(*) as repeat FROM coinbase_blocks_all GROUP BY proposer_index, coinbase_addr ORDER BY proposer_index ASC) group by coinbase_addr ORDER BY count DESC;
-"""
-
-with engine.connect() as connection:
-    df = pd.read_sql(sql_query, connection)
-
+df = utils.query.query_cache("""
+    SELECT 
+        coinbase_addr, count(*) as count, sum(repeat) as amount 
+    FROM (
+        SELECT 
+            proposer_index, 
+            coinbase_addr, 
+            count(*) as repeat 
+        FROM coinbase_blocks_all 
+        GROUP BY proposer_index, coinbase_addr 
+        ORDER BY proposer_index ASC
+    )
+    GROUP BY coinbase_addr 
+    ORDER BY count DESC;
+""")
 
 # generate pie chart (slots)
 y = np.array([
@@ -63,8 +72,8 @@ for i in range(1, 20):
     x.append(i)
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
-ax.set_xlabel("Number of validators sharing coinbase address")
-ax.set_ylabel("Number of blocks")
+fig.set_xlabel("Number of validators sharing coinbase address")
+fig.set_ylabel("Number of blocks")
 ax.bar(x, y)
 ax.set_xticks(x)
 fig.savefig("out/coinbase_addr_distribution-bar-chart.png")
