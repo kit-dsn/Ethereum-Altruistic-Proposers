@@ -109,6 +109,9 @@ CHECK_COUNT += df['count'].sum()
 assert len(df[df['count'] < df['relay_count']]) == 0
 assert df.proposer_index.isin(df_sometimes_relay_proposer.proposer_index).all()
 
+# export this data
+df.to_json('out/proposer_collaboration-sometimes-relaying-proposer-coinbase.json')
+
 reorg_proposer_index(df)
 
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(60,20))
@@ -127,6 +130,9 @@ df = fetch_coinbase_addrs_used(df_always_relay_proposer)
 CHECK_COUNT += df['count'].sum()
 assert len(df[df['count'] < df['relay_count']]) == 0
 
+# export this data
+df.to_json('out/proposer_collaboration-always-relaying-proposer-coinbase.json')
+
 reorg_proposer_index(df)
 
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(60,20))
@@ -144,6 +150,10 @@ fig.savefig("out/proposer_collaboration-scatter-always-relaying-proposers.png")
 df = fetch_coinbase_addrs_used(df_no_relay_proposer)
 CHECK_COUNT += df['count'].sum()
 df = add_coinbase_reoccurence(df)
+
+# export this data
+df.to_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
+
 assert len(df[df['count'] < df['relay_count']]) == 0
 reorg_proposer_index(df)
 
