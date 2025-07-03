@@ -175,3 +175,32 @@ fig.savefig("out/proposer_collaboration-scatter-no-relaying-proposers.png")
 print(f"Check Count: {CHECK_COUNT}")
 print(f"Sum of Validators: {len(df_no_relay_proposer) + len(df_sometimes_relay_proposer) + len(df_always_relay_proposer)}")
 print(f"Sum slots: {df_no_relay_proposer.slots.sum() + df_sometimes_relay_proposer.slots.sum() + df_always_relay_proposer.slots.sum()}")
+
+
+# ============================
+# Dig deeper into no-relaying
+# ============================
+
+df = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
+
+df_coinbases = df.groupby('coinbase_addr')['count'].sum()
+df_coinbases = utils.query.query_cache(f"""
+    SELECT 
+        coinbase_addr, 
+        COUNT(DISTINCT coinbase_blocks_all.slot) as all_count, 
+        COUNT(DISTINCT relay_all.slot) as relay_count
+    FROM coinbase_blocks_all 
+    LEFT JOIN relay_all ON (relay_all.block_number = coinbase_blocks_all.block_number)
+    WHERE coinbase_addr IN (
+        {','.join(df_coinbases.index.map(lambda x: f"'{x}'"))}
+    )
+    GROUP BY coinbase_addr 
+""").merge(df_coinbases.rename('count'), left_on='coinbase_addr', right_index=True)
+
+print(df_coinbases)
+
+print(df_coinbases[df_coinbases['all_count'] < df_coinbases['relay_count']])
+
+assert len(df_coinbases[df_coinbases['all_count'] < df_coinbases['count']]) == 0
+assert len(df_coinbases[df_coinbases['all_count'] < df_coinbases['relay_count']]) == 0
+assert len(df_coinbases) == len(df['coinbase_addr'].unique())
