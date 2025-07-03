@@ -190,17 +190,17 @@ df_coinbases = utils.query.query_cache(f"""
         COUNT(DISTINCT coinbase_blocks_all.slot) as all_count, 
         COUNT(DISTINCT relay_all.slot) as relay_count
     FROM coinbase_blocks_all 
-    LEFT JOIN relay_all ON (relay_all.block_number = coinbase_blocks_all.block_number)
+    LEFT JOIN relay_all ON (relay_all.block_number = coinbase_blocks_all.block_number 
+        AND relay_all.slot = coinbase_blocks_all.slot)
     WHERE coinbase_addr IN (
         {','.join(df_coinbases.index.map(lambda x: f"'{x}'"))}
     )
     GROUP BY coinbase_addr 
 """).merge(df_coinbases.rename('count'), left_on='coinbase_addr', right_index=True)
 
-print(df_coinbases)
-
-print(df_coinbases[df_coinbases['all_count'] < df_coinbases['relay_count']])
-
 assert len(df_coinbases[df_coinbases['all_count'] < df_coinbases['count']]) == 0
 assert len(df_coinbases[df_coinbases['all_count'] < df_coinbases['relay_count']]) == 0
 assert len(df_coinbases) == len(df['coinbase_addr'].unique())
+
+print(df_coinbases.sort_values(by='count'))
+print(df_coinbases.sort_values(by='relay_count'))
