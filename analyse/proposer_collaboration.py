@@ -188,10 +188,19 @@ df_coinbases = utils.query.query_cache(f"""
     SELECT 
         coinbase_addr, 
         COUNT(DISTINCT coinbase_blocks_all.slot) as all_count, 
-        COUNT(DISTINCT relay_all.slot) as relay_count
+        COUNT(DISTINCT r.block_number) as relay_count
     FROM coinbase_blocks_all 
-    LEFT JOIN relay_all ON (relay_all.block_number = coinbase_blocks_all.block_number 
-        AND relay_all.slot = coinbase_blocks_all.slot)
+    LEFT JOIN (
+        SELECT 
+            DISTINCT relay_all.block_number 
+        FROM relay_all 
+        INNER JOIN coinbase_blocks_all 
+        ON (
+            relay_all.slot = coinbase_blocks_all.slot AND 
+            relay_all.block_number = coinbase_blocks_all.block_number
+        )
+    ) r 
+    ON (r.block_number = coinbase_blocks_all.block_number)
     WHERE coinbase_addr IN (
         {','.join(df_coinbases.index.map(lambda x: f"'{x}'"))}
     )
@@ -202,5 +211,12 @@ assert len(df_coinbases[df_coinbases['all_count'] < df_coinbases['count']]) == 0
 assert len(df_coinbases[df_coinbases['all_count'] < df_coinbases['relay_count']]) == 0
 assert len(df_coinbases) == len(df['coinbase_addr'].unique())
 
-print(df_coinbases.sort_values(by='count'))
-print(df_coinbases.sort_values(by='relay_count'))
+df = df_coinbases.sort_values(by='count')
+df = df.reset_index(drop=True)
+
+
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,7))
+ax.plot(df.index.to_list(), df['count'])
+ax.scatter(df[df['relay_count'] != 0].index.to_list(), df[df['relay_count'] != 0]['relay_count'], c='red')
+ax.set_yscale('log')
+fig.savefig("out/proposer_collaboration-no-relaying-coinbases.png")
