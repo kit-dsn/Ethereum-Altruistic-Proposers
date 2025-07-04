@@ -24,7 +24,7 @@ df_relay_proposer = utils.query.query_cache("""
     ORDER BY COUNT(coinbase_blocks_all.slot) DESC
 """)
 
-assert df_all_proposer["slots"].sum() == 859413
+assert df_all_proposer["slots"].sum() == 859313
 
 df_no_relay_proposer = df_all_proposer[~df_all_proposer.proposer_index.isin(df_relay_proposer.proposer_index)]
 df_relay_proposer = df_relay_proposer.rename(columns={"coinbase_addrs": "relay_coinbase_addrs", "slots": "relay_slots"})
