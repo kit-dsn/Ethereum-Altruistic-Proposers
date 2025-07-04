@@ -6,7 +6,15 @@ import matplotlib.pyplot as plt
 engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
 
 sql_query = """
-SELECT count(DISTINCT block_number) as relay_blocks, (SELECT count(*) FROM coinbase_blocks) as total_blocks FROM relay_all WHERE block_number >= (SELECT min(block_number) FROM coinbase_blocks) AND block_number <= (SELECT max(block_number) FROM coinbase_blocks);
+    SELECT 
+        count(DISTINCT relay_all.block_number) as relay_blocks, 
+        (SELECT count(*) FROM coinbase_blocks_all) as total_blocks 
+    FROM relay_all 
+    INNER JOIN coinbase_blocks_all ON (
+        coinbase_blocks_all.slot = relay_all.slot AND
+        coinbase_blocks_all.block_number = relay_all.block_number AND 
+        coinbase_blocks_all.block_hash = coinbase_blocks_all.block_hash
+    )
 """
 
 with engine.connect() as connection:
