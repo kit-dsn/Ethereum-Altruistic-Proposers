@@ -8,10 +8,7 @@ variables:
 analyse-job:
   stage: analyse
   script:
-    - for script in analyse/*.py; do
-        echo "Executing $script";
-        python3 $script;
-      done
+    - python3 run_scripts.py
   artifacts:
     paths:
       - out/
