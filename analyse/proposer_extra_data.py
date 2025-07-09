@@ -1,4 +1,4 @@
-# depends_on: proposer_collaboration.py,proposer_
+# depends_on: proposer_collaboration.py,proposer_clusters.py
 import pandas as pd
 import json
 import utils.query
