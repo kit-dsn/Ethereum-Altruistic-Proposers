@@ -43,6 +43,9 @@ ax.legend(wedges, labels,
 fig.savefig("out/coinbase_addr_distribution-slots.png")
 plt.close(fig)
 
+# export unique coinbase addresses
+df[df["count"] <= 1].to_json('out/coinbase_addr_distribution-unique-coinbase-addrs.json')
+
 # generate pie chart (validators)
 y = np.array([
     int(df[df["count"] > 1]["count"].sum()), # coinbase_addresses used by more than one validator
