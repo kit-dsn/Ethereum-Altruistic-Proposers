@@ -5,7 +5,7 @@ import utils.query
 import os.path
 import matplotlib.pyplot as plt
 import numpy as np
-from colorhash import ColorHash
+from binascii import crc32
 
 # which extra data do non-relaying proposers use?
 
@@ -82,7 +82,46 @@ for index, blocks in enumerate(items):
     X = np.array([d['block_number'] for d in blocks])
     Y = np.array([d['proposer'] for d in blocks])
 
-    C = [ColorHash(d['extra_data']).hex for d in blocks]
+    # copied from https://github.com/dimostenis/color-hash-python/blob/main/src/colorhash/colorhash.py
+    # licensed under MIT
+    def colorhash(data):
+        lightness = (0.35, 0.5, 0.65)
+        saturation = (0.45, 0.5, 0.65)
+
+        hash_val = crc32(str(data).encode('utf-8')) & 0xFFFFFFFF
+        h = hash_val % 359
+        hash_val //= 360
+        s = saturation[hash_val % len(saturation)]
+        hash_val //= len(saturation)
+        l = lightness[hash_val % len(lightness)]
+
+        h /= 360
+
+        q = l * (1 + s) if l < 0.5 else l + s - l * s
+        p = 2 * l - q
+
+        def hue_to_rgb(p: float, q: float, t: float):
+            if t < 0:
+                t += 1
+            elif t > 1:
+                t -= 1
+
+            if t < 1 / 6:
+                return p + (q - p) * 6 * t
+            if t < 1 / 2:
+                return q
+            if t < 2 / 3:
+                return p + (q - p) * (2 / 3 - t) * 6
+            return p
+
+        r = round(hue_to_rgb(p, q, h + 1 / 3) * 255)
+        g = round(hue_to_rgb(p, q, h) * 255)
+        b = round(hue_to_rgb(p, q, h - 1 / 3) * 255)
+
+        return "#{:02x}{:02x}{:02x}".format(*(r,g,b))
+
+
+    C = [colorhash(d['extra_data']) for d in blocks]
 
     # generate scatter plot
     fig, ax = plt.subplots(nrows=1, ncols=1)
