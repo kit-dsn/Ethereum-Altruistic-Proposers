@@ -1,4 +1,4 @@
-# depends_on: proposer_extra_data,proposer_extra_data_organize,proposer_clusters
+# depends_on: proposer_extra_data.py,proposer_extra_data_organize.py,proposer_clusters.py
 import pandas as pd
 import json
 
