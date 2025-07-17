@@ -50,7 +50,9 @@ else:
 
 
 # draw a scatterplot with changes of extra_data
-df = result_df[result_df['num_blocks'] > 50].sort_values(by='num_proposers', ascending=False)
+# df = result_df[result_df['num_blocks'] > 50].sort_values(by='num_proposers', ascending=False)
+df = result_df[result_df['num_proposers'] > 1][result_df['num_extra_data'] > 1][result_df['num_extra_data'] != result_df['num_proposers']]
+df = df.sort_values(by='num_proposers', ascending=False)
 df = df.reset_index(drop=True)
 
 items = []
@@ -125,11 +127,26 @@ for index, blocks in enumerate(items):
 
     # generate scatter plot
     fig, ax = plt.subplots(nrows=1, ncols=1)
-    ax.scatter(X, Y, c=C, alpha=0.3, s=5)
+    ax.scatter(X, Y, c=C, alpha=0.8, s=5)
     ax.set_xlabel("Block Number")
     ax.set_ylabel("Proposer Index")
     ax.set_title(f"Cluster {df.iloc[index]['cluster']}")
+
     fig.savefig(f"out/proposer_extra_data/coinbase-{index}.png")
+
+    # add lines for blocks from same validator
+    block_df = pd.DataFrame(blocks)
+    proposer_group = block_df.groupby(by='proposer').count()
+    multi_proposers = proposer_group[proposer_group['block_number'] > 1].index
+
+    for p in list(multi_proposers):
+        pb = block_df[block_df['proposer'] == p]['block_number'].values
+
+        for a, b in zip(pb, pb[1:]):
+            ax.plot([a, b], [p, p], c='black', alpha=0.2)
+        
+    fig.savefig(f"out/proposer_extra_data/coinbase-{index}-lines.png")
+    
     plt.close(fig)
 
     # generate json
@@ -139,5 +156,9 @@ for index, blocks in enumerate(items):
     
     with open(f'out/proposer_extra_data/coinbase-{index}.txt', 'w') as file:
         out = '\n'.join(df.iloc[index]['cluster'])
+
+        out += '\n\n'
+        out += f"Number of extra_data values: {len(block_df['extra_data'].unique())}"
+
         file.write(out)
 
