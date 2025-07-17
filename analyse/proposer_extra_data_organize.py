@@ -93,6 +93,7 @@ all_follow_ups.reset_index(drop=True).to_json('out/proposer_extra_data_organize-
 
 non_relaying_proposers = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')['proposer_index'].unique()
 
+
 extra_data_otherwise = []
 for extra_data in all_patterns['extra_data'].unique():
     res = utils.query.query_cache(f"""
@@ -121,7 +122,7 @@ for extra_data in all_patterns['extra_data'].unique():
         "only_non_relaying_validators": res.iloc[0]['non_relaying_blocks'] == res.iloc[0]['all_blocks'],
         "total_blocks": res.iloc[0]['all_blocks'],
         "total_blocks_from_non_relaying_validators": res.iloc[0]['non_relaying_blocks'],
-        "total_non_relaying_coinbase_clusters": all_patterns[all_patterns['extra_data'] == extra_data]['pattern_index'].count(),
+        "total_non_relaying_global_coinbase_clusters": all_patterns[all_patterns['extra_data'] == extra_data]['pattern_index'].count(),
         "clusters": clusters
     })
     
