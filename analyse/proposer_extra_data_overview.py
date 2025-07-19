@@ -141,6 +141,28 @@ extra_data_occurence_global = all_patterns.groupby(by='extra_data')['pattern_ind
 extra_data_occurence_global['extra_data_decoded'] = extra_data_occurence_global['extra_data'].apply(lambda x: bytes.fromhex(x[2:]))
 extra_data_occurence_global = extra_data_occurence_global.rename(columns={"pattern_index": "cluster_count"})
 
+def parse_extra_data(x):
+    b = bytes.fromhex(x[2:])
+    if (len(b) > 0):
+        if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
+            # this is a geth extra_data
+            major = b[2]
+            minor = b[3]
+            patch = b[4]
+
+            client_end = 6+b[5]-0x80
+            client = b[6:client_end]
+            goversion_end = client_end+1+b[client_end]-0x80
+            goversion = b[client_end+1:goversion_end]
+
+            os = b[goversion_end+1:]
+
+            return (f"{major}.{minor}.{patch}", client, goversion, os)
+    
+    return None
+
+extra_data_occurence_global['extra_data_parsed'] = extra_data_occurence_global['extra_data'].apply(lambda x: parse_extra_data(x))
+
 extra_data_otherwise = pd.read_json('out/proposer_extra_data_organize-extra-data-otherwise.json')
 
 htmlOut += f"""
@@ -148,7 +170,7 @@ htmlOut += f"""
     <p>In the {len(all_patterns['pattern_index'].unique())} coinbase addr clusters with global behavior, we see {len(all_patterns['extra_data'].unique())} different extra_data values.</p>
 """
 
-# table of all other behaviors
+# table of extra data values
 htmlOut += "<details><summary>Table of extra data values</summary>"
 htmlOut += extra_data_occurence_global.to_html(escape=False)
 htmlOut += "</details>"
@@ -171,7 +193,6 @@ htmlOut += f"""
 htmlOut += "<details><summary>Table of extra data value changes</summary>"
 htmlOut += all_follow_ups.to_html(escape=False)
 htmlOut += "</details>"
-
 
 htmlOut += "</body></html>"
 
