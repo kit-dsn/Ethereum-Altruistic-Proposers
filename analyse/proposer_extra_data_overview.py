@@ -182,8 +182,10 @@ all_follow_ups = all_follow_ups.sort_values(by='count', ascending=False)
 all_follow_ups = all_follow_ups.rename(columns={'count': 'cluster_count'})
 all_follow_ups = all_follow_ups[all_follow_ups.columns.tolist()[-1:] + all_follow_ups.columns.tolist()[:-1]]
 
-all_follow_ups['extra_data'] = all_follow_ups['extra_data'].apply(lambda x: f"{x}<br>{bytes.fromhex(x[2:])}")
-all_follow_ups['next_extra_data'] = all_follow_ups['next_extra_data'].apply(lambda x: f"{x}<br>{bytes.fromhex(x[2:])}")
+all_follow_ups['extra_data'] = all_follow_ups['extra_data'].apply(lambda x: f"{x}<br>{bytes.fromhex(x[2:])}<br>{parse_extra_data(x)}")
+all_follow_ups['next_extra_data'] = all_follow_ups['next_extra_data'].apply(lambda x: f"{x}<br>{bytes.fromhex(x[2:])}<br>{parse_extra_data(x)}")
+
+all_follow_ups['graph'] = [f"<a href='proposer_extra_data_organize/changes/change-{i}.png'>Link</a>" for i in all_follow_ups.index]
 
 htmlOut += f"""
     <h3>pairs of extra-data values</h3>

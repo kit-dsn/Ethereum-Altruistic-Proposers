@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import json
 import utils.query
+import matplotlib.pyplot as plt
 
 # this script tries to detect a 'global' pattern
 # of extra data within the clusters
@@ -83,10 +84,56 @@ for extra_data in all_patterns['extra_data'].unique():
 
         all_follow_ups.append(followups)
 
-all_follow_ups = pd.concat(all_follow_ups)
-print(all_follow_ups[all_follow_ups["count"] > 2].sort_values(by="count", ascending=False))
+all_follow_ups = pd.concat(all_follow_ups).sort_values(by='count', ascending=False).reset_index(drop=True)
 
-all_follow_ups.reset_index(drop=True).to_json('out/proposer_extra_data_organize-follow-ups.json')
+with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
+    geth_releases = json.load(file)
+
+def parse_extra_data(x):
+    b = bytes.fromhex(x[2:])
+    if (len(b) > 0):
+        if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
+            major = b[2]
+            minor = b[3]
+            patch = b[4]
+            return f"{major}.{minor}.{patch}"
+    
+    return None
+
+# draw when the extra data changes happened
+for follow_idx, follow_up in all_follow_ups.iterrows():
+    c = follow_up['extra_data']
+    n = follow_up['next_extra_data']
+
+    changes = all_patterns[all_patterns['extra_data'] == c][all_patterns['next_extra_data'] == n]
+    
+    change_ranges = []
+    for idx, change in changes.iterrows():
+        next_change = all_patterns.iloc[idx+1]
+
+        assert change['extra_data'] == c
+        assert change['next_extra_data'] == n
+        assert change['next_extra_data'] == next_change['extra_data']
+        assert change['pattern_index'] == next_change['pattern_index']
+
+        assert change['end_block'] < next_change['start_block']
+        change_ranges.append([change['end_block'], next_change['start_block']])
+
+    fig, ax = plt.subplots(nrows=1, ncols=1)
+    for i, change in enumerate(change_ranges):
+        ax.plot([change[0], change[1]],[i, i])
+
+    if parse_extra_data(n) is not None:
+        update_block = geth_releases[parse_extra_data(n)]
+        ax.axvline(update_block)
+
+    ax.set_xlabel("Block Number")
+    ax.set_ylabel("Cluster Idx")
+    ax.set_xlim([all_patterns['start_block'].min(), all_patterns['end_block'].max()])
+    ax.set_title(f"{c} -> {n}")
+    fig.savefig(f"out/proposer_extra_data_organize/changes/change-{follow_idx}.png")
+
+all_follow_ups.to_json('out/proposer_extra_data_organize-follow-ups.json')
 
 # did the extra_data appear in other blocks?
 # did they appear in other clusters?
