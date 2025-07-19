@@ -123,9 +123,17 @@ for follow_idx, follow_up in all_follow_ups.iterrows():
     for i, change in enumerate(change_ranges):
         ax.plot([change[0], change[1]],[i, i])
 
-    if parse_extra_data(n) is not None:
-        update_block = geth_releases[parse_extra_data(n)]
-        ax.axvline(update_block)
+    if parse_extra_data(n) is not None or parse_extra_data(c) is not None:
+        next_v_block = geth_releases[parse_extra_data(n)] if parse_extra_data(n) is not None else None
+        cur_v_block = geth_releases[parse_extra_data(c)] if parse_extra_data(c) is not None else None
+
+        for update in geth_releases.values():
+            if update == next_v_block:
+                ax.axvline(update, c='red', ls='--')
+            elif update == cur_v_block:
+                ax.axvline(update, c='green', ls='--')
+            else:
+                ax.axvline(update, c='gray', alpha=0.3, ls='--')
 
     ax.set_xlabel("Block Number")
     ax.set_ylabel("Cluster Idx")
