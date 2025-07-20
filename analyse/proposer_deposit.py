@@ -1,4 +1,4 @@
-# depends_on: proposer_clusters.py, proposer_collaboration.py
+# depends_on: proposer_clusters.py,proposer_collaboration.py,proposer_clusters_merged.py
 from itertools import chain
 import utils.query
 import pandas as pd
