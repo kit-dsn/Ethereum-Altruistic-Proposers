@@ -8,14 +8,20 @@ from matplotlib.colors import LinearSegmentedColormap
 
 engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
 
+WARNING_PRINTED = False
+
 def query_cache(statement):
+    global WARNING_PRINTED
+    
     m = hashlib.sha256()
     m.update(statement.encode('ASCII'))
     statement_hash = m.hexdigest()
 
     # check if result is already stored
     if os.path.isfile(f"cache/{statement_hash}.json"):
-        print("Restoring Query from local cache...")
+        if not WARNING_PRINTED:
+            print("Restoring queries from local cache...")
+            WARNING_PRINTED = True
         df = pd.read_json(f"cache/{statement_hash}.json")
         return df
     else:
