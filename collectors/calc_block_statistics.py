@@ -1,18 +1,21 @@
 import requests
 import json
 import pandas as pd
+import numpy as np
 from datetime import datetime, UTC
 from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index, DateTime
 from sqlalchemy.dialects.postgresql import insert
 from itertools import chain
 from scipy.stats import spearmanr, kendalltau
 import argparse
+import warnings
 
 argparser = argparse.ArgumentParser(
     prog="Analyse blocks",
 )
 argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
 argparser.add_argument('-t', '--table', default="analyse_blocks")
+argparser.add_argument('-s', '--start', default="1")
 
 args = argparser.parse_args()
 
@@ -125,19 +128,42 @@ def analyse_block(block_number, txs, block_header):
     # when was block published
     block_timestamp = datetime.fromtimestamp(int(b_header['timestamp'], 16), UTC)
 
+    with warnings.catch_warnings(action="ignore"):
+        gas_spearman = spearmanr(list(range(len(txs))), gas_prices).statistic
+        if np.isnan(gas_spearman):
+            gas_spearman = None
+        
+        gas_kendall = kendalltau(list(range(len(txs))), gas_prices).statistic
+        if np.isnan(gas_kendall):
+            gas_kendall = None
+
+        if len(timestamps) == len(txs):
+            time_spearman = spearmanr(list(range(len(txs))), timestamps).statistic
+            if np.isnan(time_spearman):
+                time_spearman = None
+
+            time_kendall = kendalltau(list(range(len(txs))), timestamps).statistic
+            if np.isnan(time_kendall):
+                time_kendall = None
+        else:
+            time_spearman = None
+            time_kendall = None
+
+        
+
     return {
         "block_number": block_number,
         "coinbase_addr": b_header['miner'],
         "num_private_tx": len(private_txs),
         "gas_decending": decending,
         "gas_ascending": ascending,
-        "gas_spearman": spearmanr(list(range(len(txs))), gas_prices).statistic,
-        "gas_kendall": kendalltau(list(range(len(txs))), gas_prices).statistic,
+        "gas_spearman": gas_spearman,
+        "gas_kendall": gas_kendall,
         "time_block": block_timestamp,
         "time_min": min(timestamps) if len(timestamps) > 0 else None,
         "time_max": max(timestamps) if len(timestamps) > 0 else None,
-        "time_spearman": spearmanr(list(range(len(txs))), timestamps).statistic if len(timestamps) == len(txs) else None,
-        "time_kendall": kendalltau(list(range(len(txs))), timestamps).statistic if len(timestamps) == len(txs) else None
+        "time_spearman": time_spearman,
+        "time_kendall": time_kendall
     }
 
 def upload_data(blocks):
@@ -172,10 +198,8 @@ def upload_data(blocks):
     connection.execute(table.insert(), df.to_dict('records'))
     connection.commit()
 
-
-
 # skip idx 1 -> lido
-for cix in range(1,len(non_relaying_clusters)):
+for cix in range(int(args.start),len(non_relaying_clusters)):
     # iterate over each cluster
     coinbase_addrs = non_relaying_clusters[cix]
     proposers = non_relaying_clusters_proposer[cix]
