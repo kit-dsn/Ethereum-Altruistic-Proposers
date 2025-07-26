@@ -9,6 +9,7 @@ from itertools import chain
 from scipy.stats import spearmanr, kendalltau
 import argparse
 import warnings
+import time
 
 argparser = argparse.ArgumentParser(
     prog="Analyse blocks",
@@ -123,10 +124,14 @@ def analyse_block(block_number, txs, block_header):
     timestamps = []
     for tx in txs:
         if len(tx_obs[tx_obs['txn_hash'] == tx['hash']]) > 0:
-            timestamps.append(tx_obs[tx_obs['txn_hash'] == tx['hash']]['time'].iloc[0])
+            ts = tx_obs[tx_obs['txn_hash'] == tx['hash']]['time'].iloc[0]
+            if type(ts) == pd.Timestamp:
+                ts = ts.timestamp()
+                timestamps.append(ts)
+            
 
     # when was block published
-    block_timestamp = datetime.fromtimestamp(int(b_header['timestamp'], 16), UTC)
+    block_timestamp = datetime.fromtimestamp(int(b_header['timestamp'], 16), UTC).timestamp()
 
     with warnings.catch_warnings(action="ignore"):
         gas_spearman = spearmanr(list(range(len(txs))), gas_prices).statistic
@@ -211,12 +216,26 @@ for cix in range(int(args.start),len(non_relaying_clusters)):
 
     results = []
     for b in blocks:
-        print(f"Analyze block: {b}")
-        txs, b_header = get_transactions(b)
-        analysis = analyse_block(b, txs, b_header)
-        results.append(analysis)
+        try:
+            print(f"Analyze block: {b}")
+            txs, b_header = get_transactions(b)
+            analysis = analyse_block(b, txs, b_header)
+            results.append(analysis)
+        except:
+            pass
 
-    upload_data(results)
+    
+    with open(f"collectors/calc_block_statistics/analyze-{cix}.json", 'w') as file:
+        file.write(json.dumps(results, default=str)) 
+
+    try:
+        upload_data(results)
+    except:
+        print(f"Could not upload cluster {cix}")
+        with open("collectors/calc_block_statistics/error.log", 'a') as file:
+            file.write(f"Error on cluster {cix}\n")
+        
+        connection.rollback()
 
 
 # end sql connection

@@ -122,24 +122,13 @@ htmlOut += f"""
     </table>    
 """
 
-# table of all global behaviors
-htmlOut += "<details><summary>Table of global behavior</summary>"
-htmlOut += global_coinbase.to_html(escape=False)
-htmlOut += "</details>"
-
-# table of all other behaviors
-htmlOut += "<details><summary>Table of no global behavior</summary>"
-htmlOut += other_coinbase.to_html(escape=False)
-htmlOut += "</details>"
-
 # all_patterns + all_follow_ups
 all_patterns = pd.concat([pd.DataFrame.from_dict(x) for x in organize_categories['global_patterns']])
 all_patterns["pattern_index"] = (all_patterns.index == 0).cumsum()
 all_patterns = all_patterns.reset_index(drop=True)
 
-extra_data_occurence_global = all_patterns.groupby(by='extra_data')['pattern_index'].count().sort_values(ascending=False).reset_index()
-extra_data_occurence_global['extra_data_decoded'] = extra_data_occurence_global['extra_data'].apply(lambda x: bytes.fromhex(x[2:]))
-extra_data_occurence_global = extra_data_occurence_global.rename(columns={"pattern_index": "cluster_count"})
+# table of all global behaviors
+htmlOut += "<details><summary>Table of global behavior</summary>"
 
 def parse_extra_data(x):
     b = bytes.fromhex(x[2:])
@@ -160,6 +149,45 @@ def parse_extra_data(x):
             return (f"{major}.{minor}.{patch}", client, goversion, os)
     
     return None
+
+# parsing geth version strings
+def parse_extra_data_version(x):
+    b = bytes.fromhex(x[2:])
+    if (len(b) > 0):
+        if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
+            major = b[2]
+            minor = b[3]
+            patch = b[4]
+            return f"{major}.{minor}.{patch}"
+    
+    return None
+
+
+def summarize_extra_data_use(idx):
+    df = all_patterns[all_patterns['pattern_index'] == idx]
+    out = ""
+    for _, row in df.iterrows():
+        if parse_extra_data(row['extra_data']) is not None:
+            out += f"{row['extra_data']} {parse_extra_data(row['extra_data'])}<br>"
+        else:
+            out += f"{row['extra_data']}<br>"
+
+    return out
+
+df = global_coinbase.copy()
+df['extra_data'] = [summarize_extra_data_use(idx) for idx in range(1,len(df)+1)]
+htmlOut += df.to_html(escape=False)
+htmlOut += "</details>"
+
+# table of all other behaviors
+htmlOut += "<details><summary>Table of no global behavior</summary>"
+htmlOut += other_coinbase.to_html(escape=False)
+htmlOut += "</details>"
+
+extra_data_occurence_global = all_patterns.groupby(by='extra_data')['pattern_index'].count().sort_values(ascending=False).reset_index()
+extra_data_occurence_global['extra_data_decoded'] = extra_data_occurence_global['extra_data'].apply(lambda x: bytes.fromhex(x[2:]))
+extra_data_occurence_global = extra_data_occurence_global.rename(columns={"pattern_index": "cluster_count"})
+
 
 extra_data_occurence_global['extra_data_parsed'] = extra_data_occurence_global['extra_data'].apply(lambda x: parse_extra_data(x))
 
@@ -194,6 +222,42 @@ htmlOut += f"""
 
 htmlOut += "<details><summary>Table of extra data value changes</summary>"
 htmlOut += all_follow_ups.to_html(escape=False)
+htmlOut += "</details>"
+
+# Clusters that use geth versions before release
+htmlOut += "<h1>Pre-Release Geth</h1>"
+
+htmlOut += f"""
+    <p>There are {len(organize_categories['pre-usage'])} non-trivial clusters that use a geth version pre-release.</p>
+"""
+
+with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
+    geth_releases = json.load(file)
+
+def summarize_pre_usage(idx):
+    with open(f"out/proposer_extra_data/coinbase-{idx}.json") as file:
+        blocks = pd.DataFrame(json.load(file)['blocks'])
+    
+    out = ""
+    
+    eds = blocks['extra_data'].unique()
+    for ed in eds:
+        if parse_extra_data_version(ed) is not None:
+            version = parse_extra_data_version(ed)
+            publication_block = geth_releases[version]
+            usage_block = blocks[blocks['extra_data'] == ed]['block_number'].min()
+            if usage_block < publication_block:
+                out += f"Geth {version} used {publication_block - usage_block} blocks ahead<br>"
+    
+    return out
+
+pre_usage_clusters = non_trivial_cases.iloc[organize_categories['pre-usage']].copy()
+print(pre_usage_clusters)
+pre_usage_clusters['Graph'] = [f"<a href='proposer_extra_data/coinbase-{i}.png'>Link</a>" for i in pre_usage_clusters.index]
+pre_usage_clusters["pre-usage"] = [summarize_pre_usage(idx) for idx in pre_usage_clusters.index]
+
+htmlOut += "<details><summary>Table of clusters that pre-use geth versions</summary>"
+htmlOut += pre_usage_clusters.to_html(escape=False)
 htmlOut += "</details>"
 
 htmlOut += "</body></html>"

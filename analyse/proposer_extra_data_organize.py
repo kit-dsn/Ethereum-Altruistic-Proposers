@@ -8,7 +8,21 @@ import matplotlib.pyplot as plt
 # this script tries to detect a 'global' pattern
 # of extra data within the clusters
 
-result = {'other': [], 'global': [], 'global_patterns': []}
+result = {'other': [], 'global': [], 'global_patterns': [], 'pre-usage': []}
+
+with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
+    geth_releases = json.load(file)
+
+def parse_extra_data(x):
+    b = bytes.fromhex(x[2:])
+    if (len(b) > 0):
+        if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
+            major = b[2]
+            minor = b[3]
+            patch = b[4]
+            return f"{major}.{minor}.{patch}"
+    
+    return None
 
 i = 0 # current cluster index
 while os.path.exists(f"out/proposer_extra_data/coinbase-{i}.json"):
@@ -41,6 +55,16 @@ while os.path.exists(f"out/proposer_extra_data/coinbase-{i}.json"):
         else:
             result['other'].append(i)
 
+        # check if there are any pre-release usages
+        eds = blocks['extra_data'].unique()
+        for ed in eds:
+            if parse_extra_data(ed) is not None:
+                version = parse_extra_data(ed)
+                publication_block = geth_releases[version]          
+                if blocks[blocks['extra_data'] == ed]['block_number'].min() < publication_block:
+                    result['pre-usage'].append(i)
+                    break
+
     i += 1
 
 print(f"Analyzed {len(result['global']) + len(result['other'])} clusters.")
@@ -51,7 +75,8 @@ with open("out/proposer_extra_data_organize-categories.json", "w") as file:
     file.write(json.dumps({
         "global": result['global'],
         "other": result['other'],
-        "global_patterns": [x.to_dict('records') for x in result['global_patterns']]
+        "global_patterns": [x.to_dict('records') for x in result['global_patterns']],
+        'pre-usage': result['pre-usage']
     }))
 
 # take a look at the global patterns...
@@ -85,20 +110,6 @@ for extra_data in all_patterns['extra_data'].unique():
         all_follow_ups.append(followups)
 
 all_follow_ups = pd.concat(all_follow_ups).sort_values(by='count', ascending=False).reset_index(drop=True)
-
-with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
-    geth_releases = json.load(file)
-
-def parse_extra_data(x):
-    b = bytes.fromhex(x[2:])
-    if (len(b) > 0):
-        if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
-            major = b[2]
-            minor = b[3]
-            patch = b[4]
-            return f"{major}.{minor}.{patch}"
-    
-    return None
 
 # draw when the extra data changes happened
 for follow_idx, follow_up in all_follow_ups.iterrows():

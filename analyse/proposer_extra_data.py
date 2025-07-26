@@ -49,6 +49,22 @@ else:
     result_df = pd.read_json('out/proposer_extra_data-overall.json')
 
 
+# import geth releases
+with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
+    geth_releases = json.load(file)
+
+# parsing geth version strings
+def parse_extra_data(x):
+    b = bytes.fromhex(x[2:])
+    if (len(b) > 0):
+        if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
+            major = b[2]
+            minor = b[3]
+            patch = b[4]
+            return f"{major}.{minor}.{patch}"
+    
+    return None
+
 # draw a scatterplot with changes of extra_data
 # df = result_df[result_df['num_blocks'] > 50].sort_values(by='num_proposers', ascending=False)
 df = result_df[result_df['num_proposers'] > 1][result_df['num_extra_data'] > 1][result_df['num_extra_data'] != result_df['num_proposers']]
@@ -128,6 +144,18 @@ for index, blocks in enumerate(items):
     # generate scatter plot
     fig, ax = plt.subplots(nrows=1, ncols=1)
     ax.scatter(X, Y, c=C, alpha=0.8, s=5)
+
+    # if proposer is using geth, show versions
+    block_df = pd.DataFrame(blocks)
+    if block_df['extra_data'].apply(lambda x: parse_extra_data(x) is not None).any():
+        eds = block_df['extra_data'].unique()
+        for ed in eds:
+            if parse_extra_data(ed) is not None:
+                version = parse_extra_data(ed)
+                publication_block = geth_releases[version]
+                ax.axvline(publication_block, c=colorhash(ed), ls='--')
+
+    ax.set_xlim([block_df['block_number'].min(), block_df['block_number'].max()])
     ax.set_xlabel("Block Number")
     ax.set_ylabel("Proposer Index")
     ax.set_title(f"Cluster {df.iloc[index]['cluster']}")
@@ -135,7 +163,6 @@ for index, blocks in enumerate(items):
     fig.savefig(f"out/proposer_extra_data/coinbase-{index}.png")
 
     # add lines for blocks from same validator
-    block_df = pd.DataFrame(blocks)
     proposer_group = block_df.groupby(by='proposer').count()
     multi_proposers = proposer_group[proposer_group['block_number'] > 1].index
 
