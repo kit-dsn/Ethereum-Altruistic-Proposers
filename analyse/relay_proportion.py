@@ -12,8 +12,7 @@ sql_query = """
     FROM relay_all 
     INNER JOIN coinbase_blocks_all ON (
         coinbase_blocks_all.slot = relay_all.slot AND
-        coinbase_blocks_all.block_number = relay_all.block_number AND 
-        coinbase_blocks_all.block_hash = coinbase_blocks_all.block_hash
+        coinbase_blocks_all.block_number = relay_all.block_number
     )
 """
 
