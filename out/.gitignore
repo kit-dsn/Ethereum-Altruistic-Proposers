@@ -1,6 +1,7 @@
 *.png
 *.json
 *.html
+*.csv
 
 # keep recheck_coinbase-results for future reference
 !recheck_coinbase-results.json
