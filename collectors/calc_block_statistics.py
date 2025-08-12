@@ -29,14 +29,10 @@ EL_API_BASE = "http://localhost:8545"
 DB_TABLE = args.table
 
 # get clusters
-with open("out/proposer_clusters_merged.json") as file:
-    f = json.load(file)
-    non_relaying_clusters = f['clusters']
-    non_relaying_clusters_proposer = f['proposers']
+with open("out/coinbase_clusters-non-relaying-clusters.json") as file:
+    non_relaying_clusters = json.load(file)
 
-non_relaying_proposer_coinbases = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
-
-assert set(non_relaying_proposer_coinbases['proposer_index'].unique()) == set(chain(*(non_relaying_clusters_proposer)))
+non_relaying_proposer_coinbases = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')
 
 def fetch_block_numbers(coinbase_addrs, proposer_idxs):
     q = query(f"""
