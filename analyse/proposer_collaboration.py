@@ -61,7 +61,7 @@ df_sometimes_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots']
 df_always_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots'] == df_relay_proposer['slots']]
 
 def fetch_coinbase_addrs_used(df):
-    sometimes_relay_proposer_idxs = ",".join(df.proposer_index.apply(str))
+    proposer_idx = ",".join(df.proposer_index.apply(str))
     return utils.query.query_cache(f"""
         SELECT
             proposer_index,
@@ -75,7 +75,7 @@ def fetch_coinbase_addrs_used(df):
                 block_number,
                 coinbase_addr
             FROM coinbase_blocks_all
-            WHERE proposer_index IN ({sometimes_relay_proposer_idxs})
+            WHERE proposer_index IN ({proposer_idx})
         ) a
         LEFT JOIN (
             SELECT DISTINCT block_number FROM relay_all

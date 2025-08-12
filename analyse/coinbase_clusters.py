@@ -108,3 +108,29 @@ with utils.query.engine.connect() as connection:
 with open('out/coinbase_clusters-non-relaying-clusters.json', 'w') as file:
     out = json.dumps(non_relaying_clusters)
     file.write(out)
+
+# generate 'proposer-coinbase' data
+
+df_proposer_coinbase = utils.query.query_cache(f"""
+    SELECT
+        proposer_index,
+        coinbase_addr,
+        COUNT(coinbase_blocks_all.block_number) as count,
+        COUNT(relay_all) as relay_count
+    FROM coinbase_blocks_all
+    LEFT JOIN relay_all
+    ON (coinbase_blocks_all.block_number = relay_all.block_number AND coinbase_blocks_all.slot = relay_all.slot)
+    WHERE coinbase_addr IN (
+        {','.join([f"'{x}'" for x in all_non_relaying_coinbases])}
+    )
+    GROUP BY proposer_index, coinbase_addr
+""")
+
+assert len(df_proposer_coinbase[df_proposer_coinbase['relay_count'] > 0]) == 0
+assert df_proposer_coinbase["count"].sum() == df_coinbases[df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]["count"].sum()
+
+# check that number of blocks matches for each coinbase addr
+for coinbase_addr in all_non_relaying_coinbases:
+    assert df_proposer_coinbase[df_proposer_coinbase['coinbase_addr'] == coinbase_addr]['count'].sum() == df_coinbases[df_coinbases['coinbase_addr'] == coinbase_addr].iloc[0]['count']
+
+df_proposer_coinbase.to_json("out/coinbase_clusters-non-relaying-proposer-coinbase.json")

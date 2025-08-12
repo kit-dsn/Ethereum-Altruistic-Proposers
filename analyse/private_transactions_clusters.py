@@ -1,4 +1,4 @@
-# depends_on: proposer_clusters.py
+# depends_on: coinbase_clusters.py
 import utils.query
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,17 +6,19 @@ import numpy as np
 import json
 
 # analyze for each cluster
-with open('out/proposer_clusters-non-relaying-clusters.json') as file:
+with open('out/coinbase_clusters-non-relaying-clusters.json') as file:
     coinbase_clusters = json.load(file)
 
 df_by_coinbase = utils.query.query_cache(f"""
-        SELECT 
-            coinbase_addr,
-            COUNT(*) as count,
-            SUM(num_private_tx) as num_private_tx
-        FROM analyse_blocks2
-        GROUP BY coinbase_addr
+    SELECT 
+        coinbase_addr,
+        COUNT(block_number) as count,
+        SUM(num_private_transactions) as num_private_tx 
+    FROM private_blocks
+    GROUP BY coinbase_addr
     """)
+
+print(df_by_coinbase)
 
 # skip first cluster, that is lido
 df_clusters = []

@@ -1,4 +1,4 @@
-# depends_on: proposer_collaboration.py,proposer_clusters.py
+# depends_on: coinbase_clusters.py
 import pandas as pd
 import json
 import utils.query
@@ -10,9 +10,8 @@ from binascii import crc32
 # which extra data do non-relaying proposers use?
 
 if not os.path.isfile('out/proposer_extra_data-overall.json'):
-    df_proposer_coinbase = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
     coinbase_clusters = []
-    with open('out/proposer_clusters-non-relaying-clusters.json') as file:
+    with open('out/coinbase_clusters-non-relaying-clusters.json') as file:
         coinbase_clusters = json.load(file)
 
     results = []
@@ -22,12 +21,6 @@ if not os.path.isfile('out/proposer_extra_data-overall.json'):
             FROM coinbase_blocks_all
             WHERE 
                 coinbase_addr IN ({','.join([f"'{x}'" for x in cluster])})
-            AND
-                proposer_index IN (
-                    {','.join(
-                        df_proposer_coinbase[df_proposer_coinbase['coinbase_addr'].apply(lambda x: x in cluster)]['proposer_index'].apply(lambda x: str(x))
-                    )}
-                )
         """)
 
         # print(len(df['proposer_index'].unique()))
@@ -45,7 +38,6 @@ if not os.path.isfile('out/proposer_extra_data-overall.json'):
     result_df = pd.DataFrame(data=results, columns=["cluster", "num_proposers", "num_extra_data", "num_blocks"])
     result_df.to_json("out/proposer_extra_data-overall.json")
 else: 
-    df_proposer_coinbase = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
     result_df = pd.read_json('out/proposer_extra_data-overall.json')
 
 
@@ -79,12 +71,6 @@ for index,row in df.iterrows():
             FROM coinbase_blocks_all
             WHERE 
                 coinbase_addr IN ({','.join([f"'{x}'" for x in row['cluster']])})
-            AND
-                proposer_index IN (
-                    {','.join(
-                        df_proposer_coinbase[df_proposer_coinbase['coinbase_addr'].apply(lambda x: x in row['cluster'])]['proposer_index'].apply(lambda x: str(x))
-                    )}
-                )
     """)
 
     row_df = row_df.sort_values(by='block_number', ascending=True)

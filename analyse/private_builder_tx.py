@@ -1,4 +1,4 @@
-# depends_on: proposer_clusters_merged.py,proposer_collaboration.py
+# depends_on: coinbase_clusters.py
 import requests
 import json
 import pandas as pd
@@ -11,6 +11,8 @@ from scipy.stats import spearmanr, kendalltau
 import argparse
 import warnings
 import time
+from itertools import chain
+
 
 engine = create_engine("postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc")
 connection = engine.connect()
@@ -18,18 +20,16 @@ def query(sql):
     return pd.read_sql(sql, connection)
 
 # get clusters
-with open("out/proposer_clusters_merged.json") as file:
-    f = json.load(file)
-    non_relaying_clusters = f['clusters']
-    non_relaying_clusters_proposer = f['proposers']
-
-non_relaying_proposer_coinbases = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
-
-assert set(non_relaying_proposer_coinbases['proposer_index'].unique()) == set(chain(*(non_relaying_clusters_proposer)))
+with open("out/coinbase_clusters-non-relaying-clusters.json") as file:
+    non_relaying_clusters = json.load(file)
 
 # get blocks with private transactions
 non_relaying_blocks_with_xof = query(f"""
-    SELECT block_number, coinbase_addr FROM analyse_blocks2 WHERE num_private_tx > 0;
+    SELECT block_number, coinbase_addr
+    FROM private_blocks 
+    WHERE num_private_transactions > 0 AND coinbase_addr IN (
+        {','.join([f"'{x}'" for x in chain(*non_relaying_clusters)])}
+    );
 """)
 
 # get (common) builder accounts

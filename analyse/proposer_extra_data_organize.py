@@ -157,7 +157,7 @@ all_follow_ups.to_json('out/proposer_extra_data_organize-follow-ups.json')
 # did the extra_data appear in other blocks?
 # did they appear in other clusters?
 
-non_relaying_proposers = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')['proposer_index'].unique()
+non_relaying_proposers = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')['proposer_index'].unique()
 
 
 extra_data_otherwise = []

@@ -1,4 +1,4 @@
-# depends_on: proposer_extra_data.py,proposer_extra_data_organize.py,proposer_clusters.py
+# depends_on: proposer_extra_data.py,proposer_extra_data_organize.py,coinbase_clusters.py
 import pandas as pd
 import json
 
@@ -10,11 +10,10 @@ htmlOut = "<!DOCTYPE html><html><head><title>RFC - proposer_extra_data_overview<
 htmlOut += "<h1>Overview</h1>\n"
 htmlOut += "<p>We are only looking at non_relaying validators!</p>\n"
 
-
-with open('out/proposer_clusters-non-relaying-clusters.json') as file:
+with open('out/coinbase_clusters-non-relaying-clusters.json') as file:
     non_relaying_clusters = json.load(file)
 
-non_relaying_coinbase = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
+non_relaying_coinbase = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')
 
 proposer_extra_overall = pd.read_json('out/proposer_extra_data-overall.json')
 
