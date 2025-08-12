@@ -1,6 +1,9 @@
 import utils.query
 from collections import defaultdict
 import networkx as nx
+import pandas as pd
+import itertools
+import json
 
 
 # fetch all coinbase addresses and the associated number of blocks and relay blocks
@@ -70,11 +73,38 @@ for coinbases in proposers_to_coinbase.values():
             for j in range(i+1, len(coinbases)):
                 graph.add_edge(coinbases[i], coinbases[j])
 
-con_components = nx.connected_components(graph)
-
 clusters = [] # only coinbase-addresses
-for idx, cluster in enumerate(con_components):
+for idx, cluster in enumerate(nx.connected_components(graph)):
     cluster = list(cluster)
     clusters.append(cluster)
-    if len(cluster) > 1:
-        print(f"Cluster {idx}: {cluster}")
+
+# go through all clusters, and check if they are still completely non-relaying...?
+non_relaying_clusters = []
+for cluster in clusters:
+    if set(cluster) <= set(df_no_relaying_coinbases['coinbase_addr']):
+        non_relaying_clusters.append(cluster)
+    
+# check again all non-relaying clusters:
+with utils.query.engine.connect() as connection:
+    for cluster in non_relaying_clusters:
+        df = pd.read_sql(f"""
+            SELECT COUNT(*) 
+                FROM coinbase_blocks_all
+            INNER JOIN
+                relay_all
+            ON (coinbase_blocks_all.block_number = relay_all.block_number AND coinbase_blocks_all.slot = relay_all.slot)
+            WHERE
+                coinbase_addr IN (
+                    {','.join([f"'{x}'" for x in cluster])}
+                );
+        """, connection)
+        assert df.iloc[0]['count'] == 0
+
+    all_non_relaying_coinbases = list(itertools.chain(*non_relaying_clusters))
+    all_relaying_coinbases = df_coinbases[~df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]
+    assert len(all_non_relaying_coinbases) + len(all_relaying_coinbases) == len(df_coinbases)
+
+
+with open('out/coinbase_clusters-non-relaying-clusters.json', 'w') as file:
+    out = json.dumps(non_relaying_clusters)
+    file.write(out)
