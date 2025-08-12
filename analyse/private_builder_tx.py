@@ -11,7 +11,7 @@ import argparse
 import warnings
 import time
 
-engine = create_engine("postgresql://root@rfc.incus.tamedfox.eu/rfc")
+engine = create_engine("postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc")
 connection = engine.connect()
 def query(sql):
     return pd.read_sql(sql, connection)
