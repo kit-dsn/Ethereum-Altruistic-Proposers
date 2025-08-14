@@ -1,3 +1,4 @@
+# depends_on: proposer_collaboration.py
 import utils.query
 from collections import defaultdict
 import networkx as nx
@@ -110,7 +111,6 @@ with open('out/coinbase_clusters-non-relaying-clusters.json', 'w') as file:
     file.write(out)
 
 # generate 'proposer-coinbase' data
-
 df_proposer_coinbase = utils.query.query_cache(f"""
     SELECT
         proposer_index,
@@ -128,6 +128,11 @@ df_proposer_coinbase = utils.query.query_cache(f"""
 
 assert len(df_proposer_coinbase[df_proposer_coinbase['relay_count'] > 0]) == 0
 assert df_proposer_coinbase["count"].sum() == df_coinbases[df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]["count"].sum()
+
+# check against our list of non-relaying proposers
+with open("out/proposer_collaboration-overview.json") as file:
+    df = pd.DataFrame.from_dict(json.load(file)['non_relaying_proposers'])
+    assert df_proposer_coinbase['proposer_index'].isin(df['proposer_index']).all()
 
 # check that number of blocks matches for each coinbase addr
 for coinbase_addr in all_non_relaying_coinbases:

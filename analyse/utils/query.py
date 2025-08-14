@@ -31,3 +31,7 @@ def query_cache(statement):
         # store result
         df.to_json(f"cache/{statement_hash}.json")
         return df
+
+def query(statement):
+    with engine.connect() as connection:
+        return pd.read_sql(statement, connection)

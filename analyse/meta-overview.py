@@ -1,0 +1,191 @@
+#depends_on:coinbase_clutsers.py,non_mev_coinbase_clusters_eoa_ca.py
+import pandas as pd
+from itertools import chain
+import json
+
+# generate an html doc from the proposer_extra_data
+
+htmlOut = "<!DOCTYPE html><html><head><title>RFC/Paper Meta-Overview</title></head><body>\n"
+
+# Secion overview
+htmlOut += "<h1>Sections</h1>\n"
+
+htmlOut += f"""
+    <ol>
+        <li><a href='#h1-relaying-proposers'>Relaying Proposers</a></li>
+        <li><a href='#h1-clustering'>Clustering</a></li>
+        <li>Outsourcing Proposers</li>
+        <li>Potentially Altruistic Proposers</li>
+    </ol>  
+"""
+
+# Section: Relaying Proposers
+htmlOut += "<h1 id='h1-relaying-proposers'>Relaying Proposers</h1>"
+
+with open("out/proposer_collaboration-overview.json") as file:
+    json_obj = json.load(file)
+    all_proposers = pd.DataFrame.from_dict(json_obj['all_proposers'])
+    non_relaying_proposers = pd.DataFrame.from_dict(json_obj['non_relaying_proposers'])
+    always_relaying_proposers = pd.DataFrame.from_dict(json_obj['always_relaying_proposers'])
+    sometimes_relaying_proposers = pd.DataFrame.from_dict(json_obj['sometimes_relaying_proposers'])
+
+total_num_proposers = all_proposers['proposer_index'].count()
+
+htmlOut += f"""
+    <table border=1>
+        <tr>
+            <th></th>
+            <th># proposers</th>
+            <th>%</th>
+        <tr>
+        <tr>
+            <td>All Proposers</td>
+            <td>{all_proposers['proposer_index'].count()}</td>
+            <td>100 %</td>
+        </tr>
+        <tr>
+            <td>└ Always Relaying Proposers</td>
+            <td>{always_relaying_proposers['proposer_index'].count()}</td>
+            <td>{always_relaying_proposers['proposer_index'].count() / all_proposers['proposer_index'].count() * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Sometimes Relaying Proposers</td>
+            <td>{sometimes_relaying_proposers['proposer_index'].count()}</td>
+            <td>{sometimes_relaying_proposers['proposer_index'].count() / all_proposers['proposer_index'].count() * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Never Relaying Proposers</td>
+            <td>{non_relaying_proposers['proposer_index'].count()}</td>
+            <td>{non_relaying_proposers['proposer_index'].count() / all_proposers['proposer_index'].count() * 100} %</td>
+        </tr>
+    </table>    
+"""
+
+htmlOut += f"""
+    <details>
+        <summary>Data</summary>
+        <pre>
+with open("out/proposer_collaboration-overview.json") as file:
+    json_obj = json.load(file)
+    all_proposers = pd.DataFrame.from_dict(json_obj['all_proposers'])
+    non_relaying_proposers = pd.DataFrame.from_dict(json_obj['non_relaying_proposers'])
+    always_relaying_proposers = pd.DataFrame.from_dict(json_obj['always_relaying_proposers'])
+    sometimes_relaying_proposers = pd.DataFrame.from_dict(json_obj['sometimes_relaying_proposers'])
+        </pre>
+    </details>
+"""
+
+
+# Section: Clustering
+htmlOut += "<h1 id='h1-clustering'>Clustering</h1>"
+
+htmlOut += "<p>We clustered proposers based if they were using the same coinbase address. Currently limited to non-relaying proposers.</p>"
+htmlOut += "<p>At this point, we loose some non-relaying proposers if their coinbase address has also been used by relaying proposers.</p>"
+
+# load all non-relaying clusters
+with open("out/coinbase_clusters-non-relaying-clusters.json") as file:
+    non_relaying_clusters = json.load(file)
+
+# load the associated proposer-coinbases
+non_relaying_clusters_proposer_coinbase = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')
+
+assert non_relaying_clusters_proposer_coinbase['coinbase_addr'].isin(chain(*non_relaying_clusters)).all() # additional check
+
+# load eoa/ca clusters
+with open("out/non_mev_coinbase_clusters_eoa_ca.json") as file:
+    json_obj = json.load(file)
+    eoa_clusters = json_obj['eoa_clusters']
+    ca_clusters = json_obj['ca_clusters']
+    eoa_proposers = pd.DataFrame.from_dict(json_obj['eoa_proposers'])
+    ca_proposers = pd.DataFrame.from_dict(json_obj['ca_proposers'])
+    ca_contract_types = pd.DataFrame.from_dict(json_obj['ca_contract_types'])
+
+htmlOut += f"""
+    <table border=1>
+        <tr>
+            <th></th>
+            <th># proposers</th>
+            <th># clusters</th>
+            <th>%</th>
+        <tr>
+        <tr>
+            <td>Proposers in Clusters never relaying</td>
+            <td>{len(non_relaying_clusters_proposer_coinbase['proposer_index'].unique())}</td>
+            <td>{len(non_relaying_clusters)}</td>
+            <td>{len(non_relaying_clusters_proposer_coinbase['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ EOA-Clusters</td>
+            <td>{len(eoa_proposers['proposer_index'].unique())}</td>
+            <td>{len(eoa_clusters)}</td>
+            <td>{len(eoa_proposers['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ CA-Clusters</td>
+            <td>{len(ca_proposers['proposer_index'].unique())}</td>
+            <td>{len(ca_clusters)}</td>
+            <td>{len(ca_proposers['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+    </table>    
+"""
+
+non_relaying_cluster_summary = []
+non_relaying_eoa_cluster_summary = []
+non_relaying_ca_cluster_summary = []
+for cluster in non_relaying_clusters:
+    obj = {
+        "coinbase_addr": cluster,
+        "num_proposer": len(non_relaying_clusters_proposer_coinbase[non_relaying_clusters_proposer_coinbase['coinbase_addr'].isin(cluster)]['proposer_index'].unique()),
+        "num_blocks": non_relaying_clusters_proposer_coinbase[non_relaying_clusters_proposer_coinbase['coinbase_addr'].isin(cluster)]['count'].sum(),
+    }
+    non_relaying_cluster_summary.append(obj)
+    if cluster in eoa_clusters:
+        non_relaying_eoa_cluster_summary.append(obj)
+    if cluster in ca_clusters: 
+        non_relaying_ca_cluster_summary.append(obj)
+    
+non_relaying_cluster_summary = pd.DataFrame(non_relaying_cluster_summary).sort_values('num_blocks', ascending=False).reset_index(drop=True)
+non_relaying_eoa_cluster_summary = pd.DataFrame(non_relaying_eoa_cluster_summary).sort_values('num_blocks', ascending=False).reset_index(drop=True)
+non_relaying_ca_cluster_summary = pd.DataFrame(non_relaying_ca_cluster_summary).sort_values('num_blocks', ascending=False).reset_index(drop=True)
+
+assert len(non_relaying_ca_cluster_summary) + len(non_relaying_eoa_cluster_summary) == len(non_relaying_cluster_summary)
+print(non_relaying_eoa_cluster_summary['num_proposer'].sum(), len(eoa_proposers['proposer_index'].unique()))
+print(non_relaying_ca_cluster_summary['num_proposer'].sum(), len(ca_proposers['proposer_index'].unique()))
+
+assert non_relaying_eoa_cluster_summary['num_proposer'].sum() == len(eoa_proposers['proposer_index'].unique())
+assert non_relaying_ca_cluster_summary['num_proposer'].sum() == len(ca_proposers['proposer_index'].unique())
+
+
+htmlOut += f"""
+    <details>
+        <summary>Data</summary>
+        <pre>
+# load all non-relaying clusters
+with open("out/coinbase_clusters-non-relaying-clusters.json") as file:
+    non_relaying_clusters = json.load(file)
+
+# load the associated proposer-coinbases
+non_relaying_clusters_proposer_coinbase = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')
+
+# load eoa/ca clusters
+with open("out/non_mev_coinbase_clusters_eoa_ca.json") as file:
+    json_obj = json.load(file)
+    eoa_clusters = json_obj['eoa_clusters']
+    ca_clusters = json_obj['ca_clusters']
+    eoa_proposers = pd.DataFrame.from_dict(json_obj['eoa_proposers'])
+    ca_proposers = pd.DataFrame.from_dict(json_obj['ca_proposers'])
+        </pre>
+
+    <details><summary>All Clusters</summary>{non_relaying_cluster_summary.to_html()}</details>
+    <details><summary>EOA Clusters</summary>{non_relaying_eoa_cluster_summary.to_html()}</details>
+    <details><summary>CA Clusters</summary>{non_relaying_ca_cluster_summary.to_html()}</details>
+    </details>
+"""
+
+htmlOut += "<h2>CA Contract Types</h2>"
+htmlOut += "<p>Patrick analysed the contracts</p>"
+
+htmlOut += ca_contract_types.to_html()
+
+with open("out/meta-overview.html", "w") as file:
+    file.write(htmlOut)

@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import utils.query
+import json
 
 df_all_proposer = utils.query.query_cache("""
     SELECT 
@@ -19,7 +20,7 @@ df_relay_proposer = utils.query.query_cache("""
         COUNT(DISTINCT coinbase_addr) as coinbase_addrs,
         COUNT(coinbase_blocks_all.slot) as slots
     FROM coinbase_blocks_all
-    INNER JOIN (SELECT DISTINCT block_number from relay_all) r ON (coinbase_blocks_all.block_number = r.block_number)
+    INNER JOIN (SELECT DISTINCT block_number, slot from relay_all) r ON (coinbase_blocks_all.block_number = r.block_number AND coinbase_blocks_all.slot = r.slot)
     GROUP BY proposer_index 
     ORDER BY COUNT(coinbase_blocks_all.slot) DESC
 """)
@@ -55,6 +56,15 @@ ax.legend(wedges, labels,
 
 fig.savefig("out/proposer_collaboration-relaying-pie.png")
 plt.close(fig)
+
+# export the proposers
+with open('out/proposer_collaboration-overview.json', 'w') as file:
+    file.write(json.dumps({
+        "all_proposers": df_all_proposer.to_dict('records'),
+        "non_relaying_proposers": df_no_relay_proposer.to_dict('records'),
+        "always_relaying_proposers": df_relay_proposer[df_relay_proposer['relay_slots'] == df_relay_proposer['slots']].to_dict('records'),
+        "sometimes_relaying_proposers": df_relay_proposer[df_relay_proposer['relay_slots'] != df_relay_proposer['slots']].to_dict('records'),
+    }))
 
 # what coinbase addresses are used by validators that *sometimes* use relays?
 df_sometimes_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots'] != df_relay_proposer['slots']]
