@@ -1,4 +1,4 @@
-# depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py,interacting_with_builders.py
+# depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py,interacting_with_builders.py,including_xof.py
 import pandas as pd
 from itertools import chain
 import json
