@@ -220,7 +220,7 @@ htmlOut += f"""
             <td>{len(eoa_proposers['proposer_index'].unique()) / total_num_proposers * 100} %</td>
         </tr>
         <tr>
-            <td>└ Clusters including private TXs with proposers</td>
+            <td>└ Clusters including private TXs with builders</td>
             <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*eoa_clusters_with_private_builder_tx))]['proposer_index'].unique())}</td>
             <td>{len(eoa_clusters_with_private_builder_tx)}</td>
             <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*eoa_clusters_with_private_builder_tx))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
