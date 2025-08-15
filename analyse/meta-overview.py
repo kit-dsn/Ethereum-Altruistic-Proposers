@@ -1,4 +1,4 @@
-# depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py,interacting_with_builders.py,including_xof.py
+# depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py,interacting_with_builders.py,including_xof.py,ordering_clusters.py
 import pandas as pd
 from itertools import chain
 import json
@@ -279,7 +279,7 @@ htmlOut += f"""
             <th>%</th>
         <tr>
         <tr>
-            <td>EOA-Clusters not interacting with Builders</code></td>
+            <td>EOA-Clusters not interacting with Builders</td>
             <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*non_interacting_eoa_clusters))]['proposer_index'].unique())}</td>
             <td>{len(non_interacting_eoa_clusters)}</td>
             <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*non_interacting_eoa_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
@@ -297,7 +297,7 @@ htmlOut += f"""
             <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*xof_only_self_transactions_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
         </tr>
         <tr>
-            <td>└ Proposers not including XOF</code></td>
+            <td>└ Proposers not including XOF</td>
             <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*not_including_xof_clusters))]['proposer_index'].unique())}</td>
             <td>{len(not_including_xof_clusters)}</td>
             <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*not_including_xof_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
@@ -321,6 +321,74 @@ with open("out/including_xof.json") as file:
     <details><summary>Coinbases (of proposers not interacting with builders) using XOF)</summary>{xof_coinbases.to_html()}</details>
     <details><summary>Transaction Addresses of XOF</summary>{xof_transaction_addresses.to_html()}</details>
     <details><summary>Clusters only including XOF with self-transactions</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in xof_only_self_transactions_clusters])}</ol></details>
+    </details>
+"""
+
+htmlOut += "<h2>Transaction Ordering</h2>"
+
+with open('out/ordering_clusters.json') as file:
+    json_obj = json.load(file)
+    strictly_decending_clusters = json_obj['strictly_decending_clusters']
+    empty_block_publisher = json_obj['empty_block_publisher']
+    remaining_clusters = json_obj['remaining_clusters']
+    df_remaining_correlation_clusters = pd.DataFrame.from_dict(json_obj['df_remaining_correlation_clusters'])
+
+htmlOut += f"""
+    <table border=1>
+        <tr>
+            <th></th>
+            <th># proposers</th>
+            <th># clusters</th>
+            <th>%</th>
+        <tr>
+        <tr>
+            <td>Proposers not including XOF</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*not_including_xof_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(not_including_xof_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*not_including_xof_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Clusters that order transactions strictly decending by gas price</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*strictly_decending_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(strictly_decending_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*strictly_decending_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Clusters that only published empty blocks</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*empty_block_publisher))]['proposer_index'].unique())}</td>
+            <td>{len(empty_block_publisher)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*empty_block_publisher))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Remaining</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*remaining_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(remaining_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*remaining_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+    </table>    
+"""
+
+htmlOut += f"""
+    <details>
+        <summary>Data</summary>
+        <pre>
+with open('out/ordering_clusters.json') as file:
+    json_obj = json.read(file)
+    strictly_decending_clusters = json_obj['strictly_decending_clusters']
+    empty_block_publisher = json_obj['empty_block_publisher']
+    remaining_clusters = json_obj['remaining_clusters']
+    df_remaining_correlation_clusters = pd.DataFrame.from_dict(json_obj['df_remaining_correlation_clusters'])
+        </pre>
+
+    <details><summary>Clusters that order transactions strictly decending by gas price</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in strictly_decending_clusters])}</ol></details>
+    <details><summary>Clusters that only published empty blocks</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in empty_block_publisher])}</ol></details>
+    <details><summary>Remaining clusters</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in remaining_clusters])}</ol></details>
+    <details><summary>Correlation values of remaining clusters</summary>{df_remaining_correlation_clusters.to_html()}</details>
+    <details><summary>Histogram for correlation values of remaining clusters</summary>
+        <img src='ordering_clusters-remaining-min.png'><br>
+        <img src='ordering_clusters-remaining-avg.png'><br>
+        <img src='ordering_clusters-remaining-max.png'>
+    </details>
     </details>
 """
 
