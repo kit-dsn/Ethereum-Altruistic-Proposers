@@ -15,7 +15,7 @@ htmlOut += f"""
         <li><a href='#h1-relaying-proposers'>Relaying Proposers</a></li>
         <li><a href='#h1-clustering'>Clustering</a></li>
         <li><a href='#h1-outsourcing'>Outsourcing Proposers</a></li>
-        <li>Potentially Altruistic Proposers</li>
+        <li><a href='#h1-potentially-altruistic'>Potentially Altruistic Proposers</a></li>
     </ol>  
 """
 
@@ -257,6 +257,72 @@ with open("out/interacting_with_builder.json") as file:
     </details>
 """
 
+# Section: Potentially Altruistic Proposers
+htmlOut += "<h1 id='h1-potentially-altruistic'>Potentially Altruistic Proposers</h1>"
+htmlOut += "<h2>XOF Inclusion</h2>"
+
+with open("out/including_xof.json") as file:
+    json_obj = json.load(file)
+    including_xof_clusters = json_obj['including_xof_clusters']
+    not_including_xof_clusters = json_obj['not_including_xof_clusters']
+    xof_coinbases = pd.DataFrame.from_dict(json_obj['xof_coinbases'])
+    xof_transaction_addresses = pd.DataFrame.from_dict(json_obj['xof_transaction_addresses'])
+    xof_only_self_transactions_clusters = json_obj['xof_only_self_transactions_clusters']
+
+
+htmlOut += f"""
+    <table border=1>
+        <tr>
+            <th></th>
+            <th># proposers</th>
+            <th># clusters</th>
+            <th>%</th>
+        <tr>
+        <tr>
+            <td>EOA-Clusters not interacting with Builders</code></td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*non_interacting_eoa_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(non_interacting_eoa_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*non_interacting_eoa_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Proposers including XOF</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*including_xof_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(including_xof_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*including_xof_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td style='padding-left: 14pt'>└ Only private self-transactions</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*xof_only_self_transactions_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(xof_only_self_transactions_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*xof_only_self_transactions_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Proposers not including XOF</code></td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*not_including_xof_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(not_including_xof_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*not_including_xof_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+    </table>    
+"""
+
+htmlOut += f"""
+    <details>
+        <summary>Data</summary>
+        <pre>
+with open("out/including_xof.json") as file:
+    json_obj = json.load(file)
+    including_xof_clusters = json_obj['including_xof_clusters']
+    not_including_xof_clusters = json_obj['not_including_xof_clusters']
+    xof_coinbases = pd.DataFrame.from_dict(json_obj['xof_coinbases'])
+        </pre>
+
+    <details><summary>Clusters including XOF</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in including_xof_clusters])}</ol></details>
+    <details><summary>Clusters not including XOF</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in not_including_xof_clusters])}</ol></details>
+    <details><summary>Coinbases (of proposers not interacting with builders) using XOF)</summary>{xof_coinbases.to_html()}</details>
+    <details><summary>Transaction Addresses of XOF</summary>{xof_transaction_addresses.to_html()}</details>
+    <details><summary>Clusters only including XOF with self-transactions</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in xof_only_self_transactions_clusters])}</ol></details>
+    </details>
+"""
 
 with open("out/meta-overview.html", "w") as file:
     file.write(htmlOut)
