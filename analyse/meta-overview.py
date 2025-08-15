@@ -1,4 +1,4 @@
-# depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py
+# depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py,interacting_with_builders.py
 import pandas as pd
 from itertools import chain
 import json
@@ -14,7 +14,7 @@ htmlOut += f"""
     <ol>
         <li><a href='#h1-relaying-proposers'>Relaying Proposers</a></li>
         <li><a href='#h1-clustering'>Clustering</a></li>
-        <li>Outsourcing Proposers</li>
+        <li><a href='#h1-outsourcing'>Outsourcing Proposers</a></li>
         <li>Potentially Altruistic Proposers</li>
     </ol>  
 """
@@ -186,6 +186,77 @@ htmlOut += "<h2>CA Contract Types</h2>"
 htmlOut += "<p>Patrick analysed the contracts</p>"
 
 htmlOut += ca_contract_types.to_html()
+
+# Section: Outsourcing
+htmlOut += "<h1 id='h1-outsourcing'>Outsourcing Proposers</h1>"
+htmlOut += "<p>We are interested in two cases for EOA clusters:</p>"
+
+htmlOut += """
+    <ol>
+        <li>Does a proposer in a cluster include a private transaction to/from builders?</li>
+        <li>A cluster only contains proposers that share this coinbase address. However, there could other proposers that also <i>belong</i> to this coinbase address (e.g., same governance), but always used relays. Relays annouce the <code>proposer_fee_recipient</code>, which is the address where builders send the bid to. Does a cluster appear as <code>proposer_fee_recipient</code>?</li>
+    </ol>
+"""
+
+with open("out/interacting_with_builder.json") as file:
+    json_obj = json.load(file)
+    eoa_clusters_with_private_builder_tx = json_obj['eoa_clusters_with_private_builder_tx']
+    eoa_clusters_appearing_as_fee_recipient = json_obj['eoa_clusters_appearing_as_fee_recipient']
+    eoa_clusters_appearing_as_fee_recipient_block_numbers = json_obj['eoa_clusters_appearing_as_fee_recipient_block_numbers']
+    non_interacting_eoa_clusters = json_obj['non_interacting_eoa_clusters']
+
+htmlOut += f"""
+    <table border=1>
+        <tr>
+            <th></th>
+            <th># proposers</th>
+            <th># clusters</th>
+            <th>%</th>
+        <tr>
+        <tr>
+            <td>EOA-Clusters</td>
+            <td>{len(eoa_proposers['proposer_index'].unique())}</td>
+            <td>{len(eoa_clusters)}</td>
+            <td>{len(eoa_proposers['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Clusters including private TXs with proposers</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*eoa_clusters_with_private_builder_tx))]['proposer_index'].unique())}</td>
+            <td>{len(eoa_clusters_with_private_builder_tx)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*eoa_clusters_with_private_builder_tx))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Clusters appearing as <code>proposer_fee_recipient</code></td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*eoa_clusters_appearing_as_fee_recipient))]['proposer_index'].unique())}</td>
+            <td>{len(eoa_clusters_appearing_as_fee_recipient)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*eoa_clusters_appearing_as_fee_recipient))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>EOA-Clusters not interacting with Builders</code></td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*non_interacting_eoa_clusters))]['proposer_index'].unique())}</td>
+            <td>{len(non_interacting_eoa_clusters)}</td>
+            <td>{len(eoa_proposers[eoa_proposers['coinbase_addr'].isin(chain(*non_interacting_eoa_clusters))]['proposer_index'].unique()) / total_num_proposers * 100} %</td>
+        </tr>
+    </table>    
+"""
+
+htmlOut += f"""
+    <details>
+        <summary>Data</summary>
+        <pre>
+with open("out/interacting_with_builder.json") as file:
+    json_obj = json.load(file)
+    eoa_clusters_with_private_builder_tx = json_obj['eoa_clusters_with_private_builder_tx']
+    eoa_clusters_appearing_as_fee_recipient = json_obj['eoa_clusters_appearing_as_fee_recipient']
+    eoa_clusters_appearing_as_fee_recipient_block_numbers = json_obj['eoa_clusters_appearing_as_fee_recipient_block_numbers']
+    non_interacting_eoa_clusters = json_obj['non_interacting_eoa_clusters']
+        </pre>
+
+    <details><summary>Clusters including private TXs with proposers</summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in eoa_clusters_with_private_builder_tx])}</ol></details>
+    <details><summary>Clusters appearing as <code>proposer_fee_recipient</code></summary><ul>{'\n'.join([f"<li><pre>{c}</pre></li>" for c in eoa_clusters_appearing_as_fee_recipient])}</ol></details>
+    </details>
+"""
+
 
 with open("out/meta-overview.html", "w") as file:
     file.write(htmlOut)
