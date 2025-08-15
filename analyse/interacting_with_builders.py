@@ -1,12 +1,8 @@
 # depends_on: non_mev_coinbase_clusters_eoa_ca.py
-import requests
 import json
 import pandas as pd
 import numpy as np
 from datetime import datetime, UTC
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index, DateTime
-from sqlalchemy.dialects.postgresql import insert
-from itertools import chain
 from itertools import chain
 from utils.query import query_cache
 
