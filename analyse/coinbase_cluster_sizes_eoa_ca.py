@@ -68,14 +68,15 @@ ax.set_xlim(0.5, ax.get_xlim()[1])
 ax2.set_ylim(0, 1)  # linear scale between 0 and 1
 ax2.set_ylabel('Share of blocks')
 ax2.fill_between(
-    np.append(np.repeat(x, 2)[1:],ax.get_xlim()[1]),
-    0,  # start from bottom
-    np.append(np.repeat(cluster_block_number_cdf_eoa.values, 2)[:-1], 1),
-    color='orange',
+    np.append(x, ax2.get_xlim()[1]),
+    np.append(cluster_block_number_cdf_eoa.values, 1),
+    step="post",
     alpha=0.2,
-    zorder=0  # ensures it stays behind scatter
+    color="orange",
+    zorder=0,
 )
 fig.savefig("out/coinbase_cluster_sizes_eao_ca-eoa-sizes.png")
+fig.savefig("out/coinbase_cluster_sizes_eao_ca-eoa-sizes.svg")
 
 # render ca sizes
 y = cluster_sizes_ca.values
@@ -93,14 +94,15 @@ ax.set_xlim(0.5, ax.get_xlim()[1])
 ax2.set_ylim(0, 1)  # linear scale between 0 and 1
 ax2.set_ylabel('Share of blocks')
 ax2.fill_between(
-    np.append(np.repeat(x, 2)[1:],ax.get_xlim()[1]),
-    0,  # start from bottom
-    np.append(np.repeat(cluster_block_number_cdf_ca.values, 2)[:-1], 1),
-    color='orange',
+    np.append(x, ax2.get_xlim()[1]),
+    np.append(cluster_block_number_cdf_ca.values, 1),
+    step="post",
     alpha=0.2,
-    zorder=0  # ensures it stays behind scatter
+    color="orange",
+    zorder=0,
 )
 fig.savefig("out/coinbase_cluster_sizes_eao_ca-ca-sizes.png")
+fig.savefig("out/coinbase_cluster_sizes_eao_ca-ca-sizes.svg")
 
 with open("analyse/coinbase_cluster_sizes_eoa_ca-contract-cluster.json") as file:
     contract_clusters = json.load(file)
@@ -151,11 +153,11 @@ ax.set_xlim(0.5, ax.get_xlim()[1])
 ax2.set_ylim(0, 1)  # linear scale between 0 and 1
 ax2.set_ylabel('Share of blocks')
 ax2.fill_between(
-    np.append(np.repeat(x, 2)[1:],ax.get_xlim()[1]),
-    0,  # start from bottom
-    np.append(np.repeat(cluster_block_number_cdf_cac.values, 2)[:-1], 1),
-    color='orange',
+    np.append(x, ax2.get_xlim()[1]),
+    np.append(cluster_block_number_cdf_cac.values, 1),
+    step="pre",
     alpha=0.2,
-    zorder=0  # ensures it stays behind scatter
+    color="orange",
+    zorder=0,
 )
 fig.savefig("out/coinbase_cluster_sizes_eao_ca-cac-sizes.png")
