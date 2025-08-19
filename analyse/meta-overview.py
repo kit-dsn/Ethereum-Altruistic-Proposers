@@ -373,7 +373,7 @@ htmlOut += f"""
         <summary>Data</summary>
         <pre>
 with open('out/ordering_clusters.json') as file:
-    json_obj = json.read(file)
+    json_obj = json.load(file)
     strictly_decending_clusters = json_obj['strictly_decending_clusters']
     empty_block_publisher = json_obj['empty_block_publisher']
     remaining_clusters = json_obj['remaining_clusters']
