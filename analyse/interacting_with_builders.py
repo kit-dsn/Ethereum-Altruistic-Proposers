@@ -67,12 +67,12 @@ if (len(builder_xofs) > 0):
 # did the coinbase addresses show up as recipients announced by relays?
 
 coinbases_as_relay_fee_recipient = query_cache(f"""
-    SELECT proposer_fee_recipient, COUNT(DISTINCT coinbase_blocks_all.block_number)
+    SELECT lower(proposer_fee_recipient) as proposer_fee_recipient, COUNT(DISTINCT coinbase_blocks_all.block_number)
     FROM relay_all
     INNER JOIN coinbase_blocks_all
     ON 
         (coinbase_blocks_all.block_number = relay_all.block_number AND coinbase_blocks_all.slot = relay_all.slot)
-    WHERE proposer_fee_recipient IN (
+    WHERE lower(proposer_fee_recipient) IN (
         {','.join([f"'{x}'" for x in chain(*eoa_clusters)])}
     )
     GROUP BY proposer_fee_recipient
