@@ -26,7 +26,7 @@ print(f"Min/Max proposer index: {min_index}-{max_index}")
 
 counts, bins = np.histogram(strictly_proposer_index, bins=100, range=(min_index, max_index))
 
-fig, ax = plt.subplots(nrows=1, ncols=1)
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5))
 ax.stairs(counts, bins)
 ax.set_xlim([min_index, max_index])
 ax.set_xticks([min_index, (min_index+max_index)//2, max_index], [str(min_index), str((min_index+max_index)//2), str(max_index)])
