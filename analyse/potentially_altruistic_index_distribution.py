@@ -90,3 +90,27 @@ fig.savefig("out/potentially_altruistic_index_both-histogram.png")
 fig.savefig("out/potentially_altruistic_index_both-histogram.svg")
 
 
+fig, (ax, ax2) = plt.subplots(sharex=True, nrows=2, ncols=1, height_ratios=[3,5])
+
+ax.stairs(all_counts, bins, color='orange')
+ax.axvline(428308, color="black", linestyle="--", lw=1.0) # 428308 is the last validator before the Merge
+ax.set_title("All observed proposers")
+ax.set_ylabel("# proposers")
+ax.set_xlim([min_index, max_index])
+ax.set_ylim([1_000, 21_000])
+ax.ticklabel_format(style='sci', axis='y', scilimits=(3,3), useMathText=True)
+ax.set_yticks([1_000, 10_000, 20_000])
+
+ax2.stairs(counts, bins)
+ax2.axvline(428308, color="black", linestyle="--", lw=1.0) # 428308 is the last validator before the Merge
+ax2.text(445000,480,'The Merge',rotation=90)
+ax2.set_title("Potentially altruistic proposers")
+ax2.set_xlim([min_index, max_index])
+ax2.ticklabel_format(style='sci', axis='x', scilimits=(6,6), useMathText=True)
+ax2.set_xticks([min_index, 1_000_000, 1_900_000])
+ax2.set_xlabel("Proposer Index")
+ax2.set_ylabel("# proposers")
+
+fig.savefig("out/potentially_altruistic_index_both-side-histogram.png")
+fig.savefig("out/potentially_altruistic_index_both-side-histogram.svg")
+
