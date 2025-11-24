@@ -56,9 +56,17 @@ cluster_block_number_cdf_ca = cluster_block_number_cdf_ca / cluster_block_number
 y = cluster_sizes_eoa.values
 x = cluster_sizes_eoa.index
 
+print(cluster_relay_fraction_eoa)
+
 fig, ax = plt.subplots(1, 1)
 ax2 = ax.twinx()
-blue_red_cmap = LinearSegmentedColormap.from_list('BlueRed', ['blue', 'red'])
+blue_red_cmap = LinearSegmentedColormap.from_list('BlueRed', ['blue', 'gray'])
+
+def get_marker_style(relay_fraction):
+    if relay_fraction > 0 and relay_fraction < 0.5:
+        return 'x'
+    return 'o'
+
 ax.scatter(x, y, c=cluster_relay_fraction_eoa, cmap=blue_red_cmap)
 ax.set_yscale('log')
 ax.set_xscale('log')

@@ -12,14 +12,12 @@ with open("out/proposer_collaboration-overview.json") as file:
 
 with open('out/including_xof.json') as file:
     json_obj = json.load(file)
-    not_including_xof_clusters = json_obj['not_including_xof_clusters']
-
-non_relaying_clusters_proposer_coinbase = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')
+    not_including_xof_proposers = json_obj['not_including_xof_proposers']
 
 min_index = all_proposers['proposer_index'].min()
 max_index = all_proposers['proposer_index'].max()
 
-potentially_altruistic_proposer_index = non_relaying_clusters_proposer_coinbase[non_relaying_clusters_proposer_coinbase['coinbase_addr'].isin(chain(*not_including_xof_clusters))]['proposer_index'].unique()
+potentially_altruistic_proposer_index = not_including_xof_proposers
 print(f"# potentially ordering proposers: {len(potentially_altruistic_proposer_index)}")
 print(f"Median index of potentially ordering proposers: {np.median(potentially_altruistic_proposer_index)}")
 
@@ -31,7 +29,7 @@ counts, bins = np.histogram(potentially_altruistic_proposer_index, bins=50, rang
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5))
 
 plt.axvline(428308, color="black", linestyle="--", lw=1.0) # 428308 is the last validator before the Merge
-plt.text(440000,600,'The Merge',rotation=90)
+plt.text(440000,1100,'The Merge',rotation=90)
 
 ax.stairs(counts, bins)
 ax.set_xlim([min_index, max_index])
@@ -58,7 +56,7 @@ for i in range(1, len(bins)):
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5))
 
 plt.axvline(428308, color="black", linestyle="--", lw=1.0) # 428308 is the last validator before the Merge
-plt.text(440000,0.088,'The Merge',rotation=90)
+plt.text(440000,0.11,'The Merge',rotation=90)
 
 ax.stairs(rel_counts, bins, fill="orange")
 ax.set_xlim([min_index, max_index])
@@ -74,7 +72,7 @@ fig.savefig("out/potentially_altruistic_index_share-histogram.svg")
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5))
 
 plt.axvline(428308, color="black", linestyle="--", lw=1.0) # 428308 is the last validator before the Merge
-ax.text(440000,600,'The Merge',rotation=90)
+ax.text(440000,1100,'The Merge',rotation=90)
 
 ax.stairs(counts, bins)
 ax.set_xlim([min_index, max_index])
@@ -97,13 +95,13 @@ ax.axvline(428308, color="black", linestyle="--", lw=1.0) # 428308 is the last v
 ax.set_title("All observed proposers")
 ax.set_ylabel("# proposers")
 ax.set_xlim([min_index, max_index])
-ax.set_ylim([1_000, 21_000])
+ax.set_ylim([2_000, 21_000])
 ax.ticklabel_format(style='sci', axis='y', scilimits=(3,3), useMathText=True)
-ax.set_yticks([1_000, 10_000, 20_000])
+ax.set_yticks([2_000, 10_000, 20_000])
 
 ax2.stairs(counts, bins)
 ax2.axvline(428308, color="black", linestyle="--", lw=1.0) # 428308 is the last validator before the Merge
-ax2.text(445000,480,'The Merge',rotation=90)
+ax2.text(445000,900,'The Merge',rotation=90)
 ax2.set_title("Potentially altruistic proposers")
 ax2.set_xlim([min_index, max_index])
 ax2.ticklabel_format(style='sci', axis='x', scilimits=(6,6), useMathText=True)
