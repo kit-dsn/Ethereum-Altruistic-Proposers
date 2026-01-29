@@ -3,24 +3,25 @@ import requests
 import logging
 import pandas as pd
 import time
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index
-from sqlalchemy.dialects.postgresql import insert
+import duckdb
 
 argparser = argparse.ArgumentParser(
     prog="Download coinbase data",
     description="Downloads the coinbase addr of blocks from geth/prism"
 )
-argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
 argparser.add_argument('--start', default="22385293")
 argparser.add_argument('table')
 
 args = argparser.parse_args()
 
-EL_API_BASE = "http://localhost:8545"
+EL_API_BASE = "http://localhost:8504"
 CL_API_BASE = "http://localhost:3500"
 
 DB = args.database
 DB_TABLE = args.table
+
+conn = duckdb.connect(DB)
 
 def fetch_el_header(block_num):
     r = requests.post(
@@ -56,38 +57,15 @@ def download_block(block_num):
 
 def upload_data(blocks):
     df = pd.DataFrame(blocks)
-    metadata = MetaData()
     
-    columns = []
-
-    for col_name, dtype in df.dtypes.items():
-        if pd.api.types.is_integer_dtype(dtype):
-            col_type = BigInteger
-        elif pd.api.types.is_float_dtype(dtype):
-            col_type = Float
-        else:
-            col_type = String
-
-        if col_name == "slot":
-            columns.append(Column(col_name, col_type, unique=True))
-        elif col_name == "block_number":
-            columns.append(Column(col_name, col_type, unique=True))
-        else:
-            columns.append(Column(col_name, col_type))
+    # Create table if it doesn't exist
+    try:
+        conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM df WHERE FALSE")
+    except:
+        pass
     
-    table = Table(DB_TABLE, 
-                  metadata, 
-                  *columns, 
-                  Index(f"ix_{DB_TABLE}_slot", "slot"),
-                  Index(f"ix_{DB_TABLE}_block_number", "block_number"),
-                  Index(f"ix_{DB_TABLE}_coinbase_addr", "coinbase_addr")
-        )
-    
-    engine = create_engine(DB)
-    metadata.create_all(engine, checkfirst=True)
-
-    with engine.begin() as conn:
-        conn.execute(table.insert(), df.to_dict('records'))
+    conn.insert(DB_TABLE, df)
+    conn.commit()
 
 BLOCK_CURRENT = int(args.start)
 BLOCK_MIN = 21525891

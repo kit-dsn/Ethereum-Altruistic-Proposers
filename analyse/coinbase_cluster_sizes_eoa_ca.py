@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import json
@@ -83,8 +82,7 @@ ax2.fill_between(
     color="orange",
     zorder=0,
 )
-fig.savefig("out/coinbase_cluster_sizes_eao_ca-eoa-sizes.png")
-fig.savefig("out/coinbase_cluster_sizes_eao_ca-eoa-sizes.svg")
+fig.savefig("out/coinbase_cluster_sizes_eao_ca-eoa-sizes.pdf")
 
 # render ca sizes
 y = cluster_sizes_ca.values
@@ -109,8 +107,7 @@ ax2.fill_between(
     color="orange",
     zorder=0,
 )
-fig.savefig("out/coinbase_cluster_sizes_eao_ca-ca-sizes.png")
-fig.savefig("out/coinbase_cluster_sizes_eao_ca-ca-sizes.svg")
+fig.savefig("out/coinbase_cluster_sizes_eao_ca-ca-sizes.pdf")
 
 with open("analyse/coinbase_cluster_sizes_eoa_ca-contract-cluster.json") as file:
     contract_clusters = json.load(file)
@@ -168,4 +165,4 @@ ax2.fill_between(
     color="orange",
     zorder=0,
 )
-fig.savefig("out/coinbase_cluster_sizes_eao_ca-cac-sizes.png")
+fig.savefig("out/coinbase_cluster_sizes_eao_ca-cac-sizes.pdf")

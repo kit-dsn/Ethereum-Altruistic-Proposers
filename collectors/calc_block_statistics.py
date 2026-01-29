@@ -3,8 +3,7 @@ import json
 import pandas as pd
 import numpy as np
 from datetime import datetime, UTC
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index, DateTime
-from sqlalchemy.dialects.postgresql import insert
+import duckdb
 from itertools import chain
 from scipy.stats import spearmanr, kendalltau
 import argparse
@@ -14,23 +13,26 @@ import time
 argparser = argparse.ArgumentParser(
     prog="Analyse blocks",
 )
-argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
 argparser.add_argument('-t', '--table', default="analyse_blocks")
 argparser.add_argument('-s', '--start', default="1")
 
 args = argparser.parse_args()
 
-engine = create_engine(args.database)
-connection = engine.connect()
+conn = duckdb.connect(args.database)
 def query(sql):
-    return pd.read_sql(sql, connection)
+    return conn.execute(sql).df()
 
-EL_API_BASE = "http://localhost:8545"
+EL_API_BASE = "http://localhost:8504"
 DB_TABLE = args.table
 
 # get clusters
 with open("out/coinbase_clusters-non-relaying-clusters.json") as file:
     non_relaying_clusters = json.load(file)
+
+with open("out/coinbase_clusters-non-relaying-proposer-coinbase.json") as file:
+    clusters_data = json.load(file)
+    non_relaying_clusters_proposer = clusters_data.get('proposers', [])
 
 non_relaying_proposer_coinbases = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')
 
@@ -169,35 +171,15 @@ def analyse_block(block_number, txs, block_header):
 
 def upload_data(blocks):
     df = pd.DataFrame(blocks)
-    metadata = MetaData()
     
-    columns = []
-
-    for col_name, dtype in df.dtypes.items():
-        if pd.api.types.is_integer_dtype(dtype):
-            col_type = BigInteger
-        elif pd.api.types.is_float_dtype(dtype):
-            col_type = Float
-        elif pd.api.types.is_datetime64_dtype(dtype) or pd.api.types.is_datetime64_ns_dtype(dtype):
-            col_type = DateTime
-        else:
-            col_type = String
-
-        if col_name == "block_number":
-            columns.append(Column(col_name, col_type, unique=True))
-        else:
-            columns.append(Column(col_name, col_type))
+    # Create table if it doesn't exist
+    try:
+        conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM df WHERE FALSE")
+    except:
+        pass
     
-    table = Table(DB_TABLE, 
-                  metadata, 
-                  *columns, 
-                  Index(f"ix_{DB_TABLE}_block_number", "block_number"),
-                  Index(f"ix_{DB_TABLE}_coinbase_addr", "coinbase_addr")
-        )
-    
-    metadata.create_all(engine, checkfirst=True)
-    connection.execute(table.insert(), df.to_dict('records'))
-    connection.commit()
+    conn.insert(DB_TABLE, df)
+    conn.commit()
 
 # skip idx 1 -> lido
 for cix in range(int(args.start),len(non_relaying_clusters)):
@@ -230,9 +212,5 @@ for cix in range(int(args.start),len(non_relaying_clusters)):
         print(f"Could not upload cluster {cix}")
         with open("collectors/calc_block_statistics/error.log", 'a') as file:
             file.write(f"Error on cluster {cix}\n")
-        
-        connection.rollback()
 
-
-# end sql connection
-connection.close()
+conn.close()

@@ -52,24 +52,26 @@ import requests
 import logging
 import pandas as pd
 import time
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index
-from sqlalchemy import select
+import duckdb
+from duckdb import sql
 
 argparser = argparse.ArgumentParser(
     prog="Recheck coinbase data",
     description="Checks the slot numbers again"
 )
-argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
 argparser.add_argument('--start', default="22385293")
 argparser.add_argument('table')
 
 args = argparser.parse_args()
 
-EL_API_BASE = "http://localhost:8545"
+EL_API_BASE = "http://localhost:8504"
 CL_API_BASE = "http://localhost:3500"
 
 DB = args.database
 DB_TABLE = args.table
+
+conn = duckdb.connect(DB)
 
 def fetch_el_header(block_num):
     r = requests.post(
@@ -93,22 +95,14 @@ def fetch_cl_header(prev_beacon_root):
         if block["canonical"]:
             return block
 
-engine = create_engine(DB)
-metadata = MetaData()
-metadata.reflect(bind=engine)
-
 def fetch_saved_slot(block_number):
-    table = metadata.tables[DB_TABLE]
-
-    with engine.begin() as conn:
-        result = conn.execute(
-            select(table.c["slot"]).where(table.c.block_number == block_number)
-        )
-
-        for row in result:
-            # there is a UNIQUE CONSTRAINT on block_number
-            # so there cannot be two rows with identical block number.^
-            return row[0]
+    result = conn.execute(
+        f"SELECT slot FROM {DB_TABLE} WHERE block_number = {block_number}"
+    ).fetchall()
+    
+    if len(result) > 0:
+        return result[0][0]
+    return None
     
 
 BLOCK_CURRENT = int(args.start)

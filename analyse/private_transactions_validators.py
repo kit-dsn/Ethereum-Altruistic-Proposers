@@ -88,5 +88,5 @@ ax.set_title("Validator Distribution")
 
 fig.tight_layout()
 fig.subplots_adjust(left=0.3, right=0.7)
-fig.savefig("out/private_transactions_validators-pie-pubpriv-relay.png")
+fig.savefig("out/private_transactions_validators-pie-pubpriv-relay.pdf")
 plt.close(fig)

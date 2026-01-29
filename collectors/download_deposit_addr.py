@@ -3,14 +3,13 @@ import requests
 import logging
 import pandas as pd
 import time
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index
-from sqlalchemy.dialects.postgresql import insert
+import duckdb
 
 argparser = argparse.ArgumentParser(
     prog="Download coinbase data",
     description="Downloads the coinbase addr of blocks from geth/prism"
 )
-argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
 argparser.add_argument('--key', help="beaconchain api key")
 argparser.add_argument('table')
 
@@ -18,6 +17,8 @@ args = argparser.parse_args()
 
 DB = args.database
 DB_TABLE = args.table
+
+conn = duckdb.connect(DB)
 
 CL_API_BASE = "http://localhost:3500"
 
@@ -56,38 +57,19 @@ def fetch_chunk(validator_list):
     return deposits
 
 def upload_data(df):
-    columns = []
-    metadata = MetaData()
-
-    for col_name, dtype in df.dtypes.items():
-        if pd.api.types.is_integer_dtype(dtype):
-            col_type = BigInteger
-        elif pd.api.types.is_float_dtype(dtype):
-            col_type = Float
-        else:
-            col_type = String
-
-        columns.append(Column(col_name, col_type))
-
-    table = Table(DB_TABLE, 
-                  metadata, 
-                  *columns, 
-                  Index(f"ix_{DB_TABLE}_proposer_index", "proposer_index"),
-                  Index(f"ix_{DB_TABLE}_block_number", "block_number")
-        )
-
-    engine = create_engine(DB)
-    metadata.create_all(engine, checkfirst=True)
-
-    with engine.begin() as conn:
-        conn.execute(table.insert(), df.to_dict('records'))
+    # Create table if it doesn't exist
+    try:
+        conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM df WHERE FALSE")
+    except:
+        pass
+    
+    conn.insert(DB_TABLE, df)
+    conn.commit()
  
 
 
 # load all proposer idx
-engine = create_engine(DB)
-with engine.connect() as connection:
-    proposer_idx = pd.read_sql(f'''SELECT DISTINCT proposer_index FROM coinbase_blocks_all;''', connection)
+proposer_idx = conn.execute(f'''SELECT DISTINCT proposer_index FROM coinbase_blocks_all;''').df()
 
 # https://stackoverflow.com/questions/312443/how-do-i-split-a-list-into-equally-sized-chunks
 def chunks(lst, n):

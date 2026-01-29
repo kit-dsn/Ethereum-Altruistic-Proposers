@@ -70,21 +70,21 @@ ax.hist(df_remaining_correlation['avg_spearman'], range=(-1,1), bins=100, color=
 ax.hist(df_remaining_correlation['avg_kendall'], range=(-1,1), bins=100, color='blue', histtype='step', label='AVG(gas_kendall)')
 ax.legend()
 ax.set_title("Ordering of Transactions for 'remaining' (per proposer)")
-fig.savefig("out/ordering_clusters-remaining-avg.png")
+fig.savefig("out/ordering_clusters-remaining-avg.pdf")
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 ax.hist(df_remaining_correlation['min_spearman'], range=(-1,1), bins=100, color='red', histtype='step', label='MIN(gas_spearman)')
 ax.hist(df_remaining_correlation['min_kendall'], range=(-1,1), bins=100, color='blue', histtype='step', label='MIN(gas_kendall)')
 ax.legend()
 ax.set_title("Ordering of Transactions for 'remaining' (per proposer)")
-fig.savefig("out/ordering_clusters-remaining-min.png")
+fig.savefig("out/ordering_clusters-remaining-min.pdf")
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 ax.hist(df_remaining_correlation['max_spearman'], range=(-1,1), bins=100, color='red', histtype='step', label='MAX(gas_spearman)')
 ax.hist(df_remaining_correlation['max_kendall'], range=(-1,1), bins=100, color='blue', histtype='step', label='MAX(gas_kendall)')
 ax.legend()
 ax.set_title("Ordering of Transactions for 'remaining' (per proposer)")
-fig.savefig("out/ordering_clusters-remaining-max.png")
+fig.savefig("out/ordering_clusters-remaining-max.pdf")
 
 assert len(df_remaining_correlation) == len(list(df_remaining['proposer_index']))
 

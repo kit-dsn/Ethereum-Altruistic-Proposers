@@ -150,7 +150,7 @@ for follow_idx, follow_up in all_follow_ups.iterrows():
     ax.set_ylabel("Cluster Idx")
     ax.set_xlim([all_patterns['start_block'].min(), all_patterns['end_block'].max()])
     ax.set_title(f"{c} -> {n}")
-    fig.savefig(f"out/proposer_extra_data_organize/changes/change-{follow_idx}.png")
+    fig.savefig(f"out/proposer_extra_data_organize/changes/change-{follow_idx}.pdf")
 
 all_follow_ups.to_json('out/proposer_extra_data_organize-follow-ups.json')
 

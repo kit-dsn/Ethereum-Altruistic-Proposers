@@ -1,13 +1,12 @@
 import pandas as pd
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index
-from sqlalchemy import select, text
+import duckdb
 import requests
 import os
 
 
 CL_API_BASE = "http://localhost:3500"
-EL_API_BASE = "http://localhost:8545"
-DB = "postgresql://root@rfc.incus.tamedfox.eu/rfc"
+EL_API_BASE = "http://localhost:8504"
+DB = "/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb"
 
 
 def fetch_el_header(block_num):
@@ -32,13 +31,12 @@ def fetch_cl_header(prev_beacon_root):
         if block["canonical"]:
             return block
 
-engine = create_engine(DB)
+conn = duckdb.connect(DB)
 
 df = pd.read_json('out/recheck_coinbase-results.json')
 select_statement = ','.join(df[df.saved != df.correct]['block_number'].apply(str))
 
-with engine.connect() as connection:
-    database = pd.read_sql(f'''SELECT * FROM coinbase_blocks WHERE block_number IN ({select_statement})''', connection)
+database = conn.execute(f'''SELECT * FROM coinbase_blocks WHERE block_number IN ({select_statement})''').df()
 
 def download_block(block_num):
     el_header = fetch_el_header(block_num)

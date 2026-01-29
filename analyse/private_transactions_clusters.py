@@ -43,7 +43,7 @@ ax.set_yscale('log')
 ax.set_xscale('log')
 ax.set_xlabel("Number of Blocks published")
 ax.set_ylabel("Number of private transactions")
-fig.savefig("out/private_transactions_clusters-blocks-private-tx-scatter.png")
+fig.savefig("out/private_transactions_clusters-blocks-private-tx-scatter.pdf")
 
 
 # generate an html doc
@@ -51,7 +51,7 @@ htmlOut = "<!DOCTYPE html><html><head><title>RFC - private_transactions_clusters
 htmlOut += f"<p>Out of {num_cluster_overall} clusters, there are {num_cluster_no_private} clusters whose blocks did not contain private transactions.</p>"
 htmlOut += f"""
     <figure>
-        <a href="private_transactions_clusters-blocks-private-tx-scatter.png" target="_blank"><img src="private_transactions_clusters-blocks-private-tx-scatter.png"></a>
+        <a href="private_transactions_clusters-blocks-private-tx-scatter.pdf" target="_blank"><img src="private_transactions_clusters-blocks-private-tx-scatter.pdf"></a>
         <figcaption>Number of private transactions vs. block count for non-PBS clusters</figcaption>
     </figure>
 """

@@ -146,7 +146,7 @@ for index, blocks in enumerate(items):
     ax.set_ylabel("Proposer Index")
     ax.set_title(f"Cluster {df.iloc[index]['cluster']}")
 
-    fig.savefig(f"out/proposer_extra_data/coinbase-{index}.png")
+    fig.savefig(f"out/proposer_extra_data/coinbase-{index}.pdf")
 
     # add lines for blocks from same validator
     proposer_group = block_df.groupby(by='proposer').count()
@@ -158,7 +158,7 @@ for index, blocks in enumerate(items):
         for a, b in zip(pb, pb[1:]):
             ax.plot([a, b], [p, p], c='black', alpha=0.2)
         
-    fig.savefig(f"out/proposer_extra_data/coinbase-{index}-lines.png")
+    fig.savefig(f"out/proposer_extra_data/coinbase-{index}-lines.pdf")
     
     plt.close(fig)
 

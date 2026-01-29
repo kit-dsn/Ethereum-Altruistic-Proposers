@@ -70,7 +70,7 @@ htmlOut += f"""
 
 # table of all non-trivial cases
 htmlOut += "<details><summary>Table of non-trivial cases</summary>"
-non_trivial_cases['Graph'] = [f"<a href='proposer_extra_data/coinbase-{i}.png'>Link</a>" for i in non_trivial_cases.index]
+non_trivial_cases['Graph'] = [f"<a href='proposer_extra_data/coinbase-{i}.pdf'>Link</a>" for i in non_trivial_cases.index]
 htmlOut += non_trivial_cases.to_html(escape=False)
 htmlOut += "</details>"
 
@@ -88,8 +88,8 @@ htmlOut += f"""
             <td>Example non-global behavior</td>
         </tr>
         <tr>
-            <td><img src="proposer_extra_data/coinbase-{organize_categories['global'][0]}.png"/></td>
-            <td><img src="proposer_extra_data/coinbase-{organize_categories['other'][1]}.png"/></td>
+            <td><img src="proposer_extra_data/coinbase-{organize_categories['global'][0]}.pdf"/></td>
+            <td><img src="proposer_extra_data/coinbase-{organize_categories['other'][1]}.pdf"/></td>
         </tr>
     </table>
     """
@@ -212,7 +212,7 @@ all_follow_ups = all_follow_ups[all_follow_ups.columns.tolist()[-1:] + all_follo
 all_follow_ups['extra_data'] = all_follow_ups['extra_data'].apply(lambda x: f"{x}<br>{bytes.fromhex(x[2:])}<br>{parse_extra_data(x)}")
 all_follow_ups['next_extra_data'] = all_follow_ups['next_extra_data'].apply(lambda x: f"{x}<br>{bytes.fromhex(x[2:])}<br>{parse_extra_data(x)}")
 
-all_follow_ups['graph'] = [f"<a href='proposer_extra_data_organize/changes/change-{i}.png'>Link</a>" for i in all_follow_ups.index]
+all_follow_ups['graph'] = [f"<a href='proposer_extra_data_organize/changes/change-{i}.pdf'>Link</a>" for i in all_follow_ups.index]
 
 htmlOut += f"""
     <h3>pairs of extra-data values</h3>
@@ -252,7 +252,7 @@ def summarize_pre_usage(idx):
 
 pre_usage_clusters = non_trivial_cases.iloc[organize_categories['pre-usage']].copy()
 print(pre_usage_clusters)
-pre_usage_clusters['Graph'] = [f"<a href='proposer_extra_data/coinbase-{i}.png'>Link</a>" for i in pre_usage_clusters.index]
+pre_usage_clusters['Graph'] = [f"<a href='proposer_extra_data/coinbase-{i}.pdf'>Link</a>" for i in pre_usage_clusters.index]
 pre_usage_clusters["pre-usage"] = [summarize_pre_usage(idx) for idx in pre_usage_clusters.index]
 
 htmlOut += "<details><summary>Table of clusters that pre-use geth versions</summary>"

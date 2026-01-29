@@ -1,10 +1,9 @@
-*.png
+*.pdf
 *.json
 *.html
 *.csv
-*.svg
+meeting-docs.html
 
 # keep recheck_coinbase-results for future reference
 !recheck_coinbase-results.json
 !recheck_coinbase_migrate.json
-!meeting-docs.htmk

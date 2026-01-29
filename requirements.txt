@@ -4,14 +4,15 @@ greenlet==3.2.2
 idna==3.10
 numpy==2.2.6
 pandas==2.2.3
-psycopg2-binary==2.9.10
 python-dateutil==2.9.0.post0
 pytz==2025.2
 requests==2.32.3
 six==1.17.0
-SQLAlchemy==2.0.41
 typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
 eth2spec==0.11.3
 networkx==3.5
+duckdb==1.4.4
+matplotlib==3.10.8
+scipy==1.17.0

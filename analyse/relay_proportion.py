@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+import duckdb
 import matplotlib.pyplot as plt
-
-engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
 
 sql_query = """
     SELECT 
@@ -16,8 +14,8 @@ sql_query = """
     )
 """
 
-with engine.connect() as connection:
-    df = pd.read_sql(sql_query, connection)
+conn = duckdb.connect('/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb')
+df = conn.execute(sql_query).df()
 
 # generate pie chart
 y = np.array([
@@ -36,5 +34,5 @@ wedges, texts, autotexts = ax.pie(y, explode=explode, autopct=lambda pct: writin
 ax.set_title("Blocks announced from relays")
 ax.legend(wedges, labels, loc="lower center")
 
-fig.savefig("out/relay_proportion-bar-chart.png")
+fig.savefig("out/relay_proportion-bar-chart.pdf")
 plt.close(fig)

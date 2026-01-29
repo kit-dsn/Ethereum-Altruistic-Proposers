@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import json
@@ -69,5 +68,4 @@ ax2.fill_between(
     color="orange",
     zorder=0,
 )
-fig.savefig("out/figure-3.png")
-fig.savefig("out/figure-3.svg")
+fig.savefig("out/figure-3.pdf")

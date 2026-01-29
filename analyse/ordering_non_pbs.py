@@ -24,7 +24,7 @@ ax.hist(gas_kendall, range=(-1,1), bins=100, color='blue', histtype='step', labe
 
 ax.legend()
 ax.set_title("Ordering of Transactions for non-relaying proposers")
-fig.savefig("out/ordering_non_pbs-histogram.png")
+fig.savefig("out/ordering_non_pbs-histogram.pdf")
 
 print(f"Number of blocks with meaningful data: {len(gas_spearman)} (spearman) / {len(gas_kendall)} (kendall)")
 
@@ -104,7 +104,7 @@ ax.hist(df_clusters['avg_kendall'], range=(-1,1), bins=100, color='blue', histty
 
 ax.legend()
 ax.set_title("Ordering of Transactions for non-relaying proposers (per Cluster)")
-fig.savefig("out/ordering_non_pbs-histogram-per-cluster-avg.png")
+fig.savefig("out/ordering_non_pbs-histogram-per-cluster-avg.pdf")
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 
@@ -113,7 +113,7 @@ ax.hist(df_clusters['min_kendall'], range=(-1,1), bins=100, color='blue', histty
 
 ax.legend()
 ax.set_title("Ordering of Transactions for non-relaying proposers (per Cluster)")
-fig.savefig("out/ordering_non_pbs-histogram-per-cluster-min.png")
+fig.savefig("out/ordering_non_pbs-histogram-per-cluster-min.pdf")
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 
@@ -122,7 +122,7 @@ ax.hist(df_clusters['max_kendall'], range=(-1,1), bins=100, color='blue', histty
 
 ax.legend()
 ax.set_title("Ordering of Transactions for non-relaying proposers (per Cluster)")
-fig.savefig("out/ordering_non_pbs-histogram-per-cluster-max.png")
+fig.savefig("out/ordering_non_pbs-histogram-per-cluster-max.pdf")
 
 
 # generate an html doc
@@ -154,7 +154,7 @@ htmlOut += f"""
 htmlOut += f"""
     <h1>All Blocks</h1>
     <figure>
-        <a href="ordering_non_pbs-histogram.png" target="_blank"><img src="ordering_non_pbs-histogram.png"></a>
+        <a href="ordering_non_pbs-histogram.pdf" target="_blank"><img src="ordering_non_pbs-histogram.pdf"></a>
         <figcaption>Histogram over the Spearman/Kendall correlation for all meaningful blocks</figcaption>
     </figure>
 """
@@ -163,15 +163,15 @@ htmlOut += f"""
     <h1>Per-Cluster</h1>
     <p>We categorized the blocks into the {len(df_clusters)} clusters (excluding Lido) and took the minimum, average and maximum of the spearman/kendall correlation.</p>
     <figure>
-        <a href="ordering_non_pbs-histogram-per-cluster-min.png" target="_blank"><img src="ordering_non_pbs-histogram-per-cluster-min.png"></a>
+        <a href="ordering_non_pbs-histogram-per-cluster-min.pdf" target="_blank"><img src="ordering_non_pbs-histogram-per-cluster-min.pdf"></a>
         <figcaption>Histogram over the minimum Spearman/Kendall correlation per cluster</figcaption>
     </figure>
     <figure>
-        <a href="ordering_non_pbs-histogram-per-cluster-avg.png" target="_blank"><img src="ordering_non_pbs-histogram-per-cluster-avg.png"></a>
+        <a href="ordering_non_pbs-histogram-per-cluster-avg.pdf" target="_blank"><img src="ordering_non_pbs-histogram-per-cluster-avg.pdf"></a>
         <figcaption>Histogram over the average Spearman/Kendall correlation per cluster</figcaption>
     </figure>
     <figure>
-        <a href="ordering_non_pbs-histogram-per-cluster-max.png" target="_blank"><img src="ordering_non_pbs-histogram-per-cluster-max.png"></a>
+        <a href="ordering_non_pbs-histogram-per-cluster-max.pdf" target="_blank"><img src="ordering_non_pbs-histogram-per-cluster-max.pdf"></a>
         <figcaption>Histogram over the maximum Spearman/Kendall correlation per cluster</figcaption>
     </figure>
 """

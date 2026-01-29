@@ -3,15 +3,14 @@ import time
 import logging
 import argparse
 import pandas as pd
-from sqlalchemy import create_engine, MetaData, Table, Column, String, BigInteger, Numeric, Float, Index
-from sqlalchemy.dialects.postgresql import insert
+import duckdb
 
 argparser = argparse.ArgumentParser(
     prog="Download Relay Data",
-    description="Downloads proposer_payload_delivered from relay API and stores results inside PSQL database"
+    description="Downloads proposer_payload_delivered from relay API and stores results inside DuckDB database"
 )
 argparser.add_argument('url')
-argparser.add_argument('-d', '--database', default="postgresql://root@rfc.incus.tamedfox.eu/rfc")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
 argparser.add_argument('--start', type=int, default=11602798)
 argparser.add_argument('table')
 
@@ -20,6 +19,8 @@ args = argparser.parse_args()
 URL = args.url
 DB = args.database
 DB_TABLE = args.table
+
+conn = duckdb.connect(DB)
 
 def query_payloads(idx_slot, relay, limit):
     while True:
@@ -48,38 +49,14 @@ def query_payloads(idx_slot, relay, limit):
     return df
 
 def upload_data(slots):
-    metadata = MetaData()
+    # Create table if it doesn't exist
+    try:
+        conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM slots WHERE FALSE")
+    except:
+        pass
     
-    columns = []
-
-    for col_name, dtype in slots.dtypes.items():
-        if pd.api.types.is_integer_dtype(dtype):
-            col_type = BigInteger
-        elif pd.api.types.is_float_dtype(dtype):
-            col_type = Float
-        else:
-            col_type = String
-
-        if col_name == "slot":
-            columns.append(Column(col_name, col_type, unique=True))
-        elif col_name == "value":
-            columns.append(Column(col_name, Numeric))
-        else:
-            columns.append(Column(col_name, col_type))
-    
-    table = Table(DB_TABLE, 
-                  metadata, 
-                  *columns, 
-                  Index(f"ix_{DB_TABLE}_slot", "slot"),
-                  Index(f"ix_{DB_TABLE}_block_number", "block_number")
-        )
-    
-    engine = create_engine(DB)
-
-    metadata.create_all(engine, checkfirst=True)
-
-    with engine.begin() as conn:
-        conn.execute(table.insert(), slots.to_dict('records'))
+    conn.insert(DB_TABLE, slots)
+    conn.commit()
 
 
 SLOT_CURRENT = args.start

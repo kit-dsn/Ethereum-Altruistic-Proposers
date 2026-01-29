@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+import duckdb
 import matplotlib.pyplot as plt
 import utils.query
-
-engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
 
 df = utils.query.query_cache("""
     SELECT 
@@ -40,7 +38,7 @@ ax.set_title("Coinbase Uniqueness")
 ax.legend(wedges, labels,
           loc="lower center")
 
-fig.savefig("out/coinbase_addr_distribution-slots.png")
+fig.savefig("out/coinbase_addr_distribution-slots.pdf")
 plt.close(fig)
 
 # export unique coinbase addresses
@@ -64,7 +62,7 @@ ax.set_title("Coinbase Uniqueness")
 ax.legend(wedges, labels,
           loc="lower center")
 
-fig.savefig("out/coinbase_addr_distribution-validators.png")
+fig.savefig("out/coinbase_addr_distribution-validators.pdf")
 plt.close(fig)
 
 # generate bar chart
@@ -79,7 +77,7 @@ ax.set_xlabel("Number of validators sharing coinbase address")
 ax.set_ylabel("Number of blocks")
 ax.bar(x, y)
 ax.set_xticks(x)
-fig.savefig("out/coinbase_addr_distribution-bar-chart.png")
+fig.savefig("out/coinbase_addr_distribution-bar-chart.pdf")
 plt.close(fig)
 
 
@@ -94,7 +92,7 @@ ax.plot(cdf_normalized.index, cdf_normalized.values, marker='o')
 ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
 ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
-fig.savefig("out/coinbase_addr_distribution-line-chart.png")
+fig.savefig("out/coinbase_addr_distribution-line-chart.pdf")
 
 ax.set_yscale('log')
-fig.savefig("out/coinbase_addr_distribution-line-chart-log.png")
+fig.savefig("out/coinbase_addr_distribution-line-chart-log.pdf")

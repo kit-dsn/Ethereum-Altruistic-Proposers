@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import utils.query
@@ -41,9 +40,9 @@ ax.plot(cdf_normalized.index, cdf_normalized.values, color="black")
 ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
 ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
-fig.savefig("out/coinbase_addr_and_relays-scatter.png")
+fig.savefig("out/coinbase_addr_and_relays-scatter.pdf")
 ax.set_yscale('log')
-fig.savefig("out/coinbase_addr_and_relays-scatter-log.png")
+fig.savefig("out/coinbase_addr_and_relays-scatter-log.pdf")
 
 # graph of validator addresses
 
@@ -69,7 +68,7 @@ ax[1].set_xticks([], [])
 ax[1].set_xlabel("Combined")
 
 fig.tight_layout()
-fig.savefig("out/coinbase_addr_and_relays-real-scatter.png")
+fig.savefig("out/coinbase_addr_and_relays-real-scatter.pdf")
 
 # export data
 df.to_json("out/coinbase_addr_and_relays-coinbase-data.json")
@@ -122,5 +121,5 @@ ax3.set_yticks([], [])
 ax2.set_xlabel("Number of Validators sharing Coinbase")
 ax1.set_ylabel("Number of Clusters")
 
-fig.savefig("out/coinbase_addr_and_relays-cluster-sizes.png")
+fig.savefig("out/coinbase_addr_and_relays-cluster-sizes.pdf")
 plt.close(fig)

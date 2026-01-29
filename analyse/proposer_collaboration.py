@@ -54,7 +54,7 @@ ax.set_title("Validators Relaying")
 ax.legend(wedges, labels,
           loc="lower center")
 
-fig.savefig("out/proposer_collaboration-relaying-pie.png")
+fig.savefig("out/proposer_collaboration-relaying-pie.pdf")
 plt.close(fig)
 
 # export the proposers
@@ -133,7 +133,7 @@ ax.set_yticks([], [])
 ax.set_xlabel("\"Proposer Index\"")
 ax.set_ylabel("Coinbase Address")
 
-fig.savefig("out/proposer_collaboration-scatter-sometimes-relaying-proposers.png")
+fig.savefig("out/proposer_collaboration-scatter-sometimes-relaying-proposers.pdf")
 
 # always relaying
 df = fetch_coinbase_addrs_used(df_always_relay_proposer)
@@ -154,7 +154,7 @@ ax.set_yticks([], [])
 ax.set_xlabel("\"Proposer Index\"")
 ax.set_ylabel("Coinbase Address")
 
-fig.savefig("out/proposer_collaboration-scatter-always-relaying-proposers.png")
+fig.savefig("out/proposer_collaboration-scatter-always-relaying-proposers.pdf")
 
 # never relaying
 df = fetch_coinbase_addrs_used(df_no_relay_proposer)
@@ -180,7 +180,7 @@ ax.set_yticks([], [])
 ax.set_xlabel("\"Proposer Index\"")
 ax.set_ylabel("Coinbase Address")
 
-fig.savefig("out/proposer_collaboration-scatter-no-relaying-proposers.png")
+fig.savefig("out/proposer_collaboration-scatter-no-relaying-proposers.pdf")
 
 print(f"Check Count: {CHECK_COUNT}")
 print(f"Sum of Validators: {len(df_no_relay_proposer) + len(df_sometimes_relay_proposer) + len(df_always_relay_proposer)}")
@@ -229,4 +229,4 @@ fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,7))
 ax.plot(df.index.to_list(), df['count'])
 ax.scatter(df[df['relay_count'] != 0].index.to_list(), df[df['relay_count'] != 0]['relay_count'], c='red')
 ax.set_yscale('log')
-fig.savefig("out/proposer_collaboration-no-relaying-coinbases.png")
+fig.savefig("out/proposer_collaboration-no-relaying-coinbases.pdf"))

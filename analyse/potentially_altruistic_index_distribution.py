@@ -37,8 +37,7 @@ ax.set_xticks([min_index, 1_000_000, 1_900_000], [str(min_index), str(1_000_000)
 ax.set_xlabel("Proposer Index")
 ax.set_ylabel("Number of potentially altruistic proposers")
 
-fig.savefig("out/potentially_altruistic_index_distribution-histogram.png")
-fig.savefig("out/potentially_altruistic_index_distribution-histogram.svg")
+fig.savefig("out/potentially_altruistic_index_distribution-histogram.pdf")
 
 
 # calculate relative share
@@ -65,8 +64,7 @@ ax.set_xlabel("Proposer Index")
 ax.set_ylabel("Share of potentially altruistic proposers")
 ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0))
 
-fig.savefig("out/potentially_altruistic_index_share-histogram.png")
-fig.savefig("out/potentially_altruistic_index_share-histogram.svg")
+fig.savefig("out/potentially_altruistic_index_share-histogram.pdf")
 
 
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5))
@@ -84,8 +82,7 @@ ax2 = ax.twinx()
 ax2.stairs(all_counts, bins, color='orange')
 ax2.set_ylabel("Number of all observed proposers")
 
-fig.savefig("out/potentially_altruistic_index_both-histogram.png")
-fig.savefig("out/potentially_altruistic_index_both-histogram.svg")
+fig.savefig("out/potentially_altruistic_index_both-histogram.pdf")
 
 
 fig, (ax, ax2) = plt.subplots(sharex=True, nrows=2, ncols=1, height_ratios=[3,5])
@@ -109,6 +106,5 @@ ax2.set_xticks([min_index, 1_000_000, 1_900_000])
 ax2.set_xlabel("Proposer Index")
 ax2.set_ylabel("# proposers")
 
-fig.savefig("out/potentially_altruistic_index_both-side-histogram.png")
-fig.savefig("out/potentially_altruistic_index_both-side-histogram.svg")
+fig.savefig("out/potentially_altruistic_index_both-side-histogram.pdf")
 

@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+import duckdb
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-
-engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
 
 sql_query = """
     SELECT coinbase_blocks_all.block_number 
@@ -32,9 +30,9 @@ sql_query2 = """
     AND relay_all.block_number IS NULL
 """
 
-with engine.connect() as connection:
-    df = pd.read_sql(sql_query, connection)
-    df2 = pd.read_sql(sql_query2, connection) 
+conn = duckdb.connect('/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb')
+df = conn.execute(sql_query).df()
+df2 = conn.execute(sql_query2).df() 
 
 df.to_json("out/coinbase_addr_without_relays-unique-blocks.json")
 df2.to_json("out/coinbase_addr_without_relays-max10-blocks.json")

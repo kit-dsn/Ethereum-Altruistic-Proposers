@@ -2,11 +2,11 @@ import pandas as pd
 import hashlib
 import os.path
 import numpy as np
-from sqlalchemy import create_engine
+import duckdb
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-engine = create_engine('postgresql://rfcanalyse@rfc.incus.tamedfox.eu/rfc')
+conn = duckdb.connect('/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb')
 
 WARNING_PRINTED = False
 
@@ -25,13 +25,11 @@ def query_cache(statement):
         df = pd.read_json(f"cache/{statement_hash}.json")
         return df
     else:
-        with engine.connect() as connection:
-            df = pd.read_sql(statement, connection)
+        df = conn.execute(statement).df()
         
         # store result
         df.to_json(f"cache/{statement_hash}.json")
         return df
 
 def query(statement):
-    with engine.connect() as connection:
-        return pd.read_sql(statement, connection)
+    return conn.execute(statement).df()
