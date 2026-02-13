@@ -9,6 +9,16 @@ Usage
 Notes
     Implements retry-on-failure with backoff. Data are inserted incrementally
     to allow long-range collection runs.
+
+Relay providers queried in this study:
+    - https://aestus.live
+    - https://agnostic-relay.net
+    - https://bloxroute.max-profit.blxrbdn.com
+    - https://bloxroute.regulated.blxrbdn.com
+    - https://boost-relay.flashbots.net
+    - https://titanrelay.xyz
+    - https://relay-analytics.ultrasound.money
+    - https://relay.ethgas.com
 """
 
 import requests
