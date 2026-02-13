@@ -1,4 +1,4 @@
-# Potentially Altruistic Validators (Paper Project)
+# Ethereum’s Fairness Mechanisms Should Not Depend on Participants’ Altruism (Paper)
 
 This repository contains the code and data-processing pipeline for a research paper on altruistic behavior among Ethereum block proposers.
 
