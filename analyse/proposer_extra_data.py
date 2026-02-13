@@ -3,9 +3,6 @@ Purpose
     Examines extra_data usage within non-relaying coinbase clusters and
     renders per-cluster timelines and exports.
 
-Usage
-    python3 analyse/proposer_extra_data.py
-
 Outputs
     out/proposer_extra_data/* files and proposer_extra_data-overall.json.
 """

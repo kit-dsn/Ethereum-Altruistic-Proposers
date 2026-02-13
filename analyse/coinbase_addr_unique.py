@@ -2,9 +2,6 @@
 Purpose
     Summarizes relay usage for blocks whose coinbase address is unique per
     validator, using outputs from the distribution analysis.
-
-Usage
-    python3 analyse/coinbase_addr_unique.py
 """
 
 # depends_on: coinbase_addr_distribution.py

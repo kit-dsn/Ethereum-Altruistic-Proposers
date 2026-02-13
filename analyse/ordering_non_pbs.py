@@ -3,9 +3,6 @@ Purpose
     Analyzes transaction ordering metrics for non-relaying blocks and
     produces per-cluster summaries and an HTML overview.
 
-Usage
-    python3 analyse/ordering_non_pbs.py
-
 Outputs
     PDF histograms and out/ordering_non_pbs-overview.html.
 """

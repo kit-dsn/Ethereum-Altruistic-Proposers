@@ -3,11 +3,8 @@ Purpose
     Generates an HTML meta-overview that aggregates key results across
     analysis steps for reporting or paper drafting.
 
-Usage
-    python3 analyse/meta-overview.py
-
 Outputs
-    HTML report in out/ (see script for filename).
+    HTML report.
 """
 
 # depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py,interacting_with_builders.py,including_xof.py,ordering_clusters.py

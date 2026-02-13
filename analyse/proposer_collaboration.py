@@ -3,9 +3,6 @@ Purpose
     Characterizes relay usage by proposers, exports proposer/coinbase
     datasets, and generates relay-related figures.
 
-Usage
-    python3 analyse/proposer_collaboration.py
-
 Outputs
     JSON exports and multiple PDF figures in out/.
 """

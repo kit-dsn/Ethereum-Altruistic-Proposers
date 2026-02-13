@@ -3,9 +3,6 @@ Purpose
     Measures private-transaction usage across non-relaying coinbase
     clusters and renders a block-vs-private-tx scatter.
 
-Usage
-    python3 analyse/private_transactions_clusters.py
-
 Outputs
     PDF scatter plot and out/private_transactions_clusters-overview.html.
 """

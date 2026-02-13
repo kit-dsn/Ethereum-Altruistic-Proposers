@@ -3,9 +3,6 @@ Purpose
     Detects non-MEV EOA clusters that interact with builders via private
     transactions or as relay fee recipients.
 
-Usage
-    python3 analyse/interacting_with_builders.py
-
 Outputs
     out/interacting_with_builder.json with cluster categories.
 """

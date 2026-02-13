@@ -2,9 +2,6 @@
 Purpose
     Builds connections betweencoinbase addresses used by non-relaying
     proposers, producing cluster.
-
-Usage
-    python3 analyse/proposer_clusters.py
 """
 
 # depends_on: proposer_collaboration.py

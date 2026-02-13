@@ -3,9 +3,6 @@ Purpose
     Maps non-relaying coinbase clusters to their associated proposers and
     exports merged cluster-proposer lists.
 
-Usage
-    python3 analyse/proposer_clusters_merged.py
-
 Outputs
     out/proposer_clusters_merged.json
 """

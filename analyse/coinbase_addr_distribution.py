@@ -3,9 +3,6 @@ Purpose
     Quantifies reuse of coinbase addresses across validators and produces
     distribution plots and a list of unique coinbase addresses.
 
-Usage
-    python3 analyse/coinbase_addr_distribution.py
-
 Outputs
     PDF figures and out/coinbase_addr_distribution-unique-coinbase-addrs.json.
 """

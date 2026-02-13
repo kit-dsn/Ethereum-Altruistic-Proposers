@@ -2,9 +2,6 @@
 Purpose
     Analyse whether proposer deposit addresses match coinbase clusters.
 
-Usage
-    python3 analyse/proposer_deposit.py
-
 Outputs
     out/proposer_deposit-results.json
 """

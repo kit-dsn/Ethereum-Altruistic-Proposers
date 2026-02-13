@@ -3,8 +3,6 @@ Purpose
     Identifies blocks proposed without relay announcements for coinbase
     addresses used by other validators, and exports the block lists.
 
-Usage
-    python3 analyse/coinbase_addr_without_relays.py
 
 Outputs
     JSON files under out/ with block_number lists.

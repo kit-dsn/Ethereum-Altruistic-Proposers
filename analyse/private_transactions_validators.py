@@ -3,9 +3,6 @@ Purpose
     Summarizes validator inclusion of private transactions and relay usage
     via nested pie charts.
 
-Usage
-    python3 analyse/private_transactions_validators.py
-
 Outputs
     out/private_transactions_validators-pie-pubpriv-relay.pdf
 """

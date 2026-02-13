@@ -3,9 +3,6 @@ Purpose
     Visualizes the proposer index distribution for potentially altruistic
     proposers and compares it to the overall proposer population.
 
-Usage
-    python3 analyse/potentially_altruistic_index_distribution.py
-
 Outputs
     Histogram PDFs in out/.
 """

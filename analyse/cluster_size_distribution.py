@@ -2,9 +2,6 @@
 Purpose
     Generates cluster-size distribution for EOA coinbase clusters
     with relay fraction overlays.
-
-Usage
-    python3 analyse/cluster_size_distribution.py
 """
 
 import pandas as pd

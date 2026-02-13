@@ -2,9 +2,6 @@
 Purpose
     Identifies proposers in non-interacting EOA clusters that include
     private transactions (XOF) and exports the proposer lists.
-
-Usage
-    python3 analyse/including_xof.py
 """
 
 # depends_on: interacting_with_builders.py

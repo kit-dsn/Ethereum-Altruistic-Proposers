@@ -3,9 +3,6 @@ Purpose
     Measures temporal distribution (block numbers) of blocks produced by
     coinbase addresses used by few validators.
 
-Usage
-    python3 analyse/coinbase_time_distribution.py
-
 Outputs
     Histogram PDF and JSON block lists in out/.
 """
