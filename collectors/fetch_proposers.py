@@ -1,3 +1,16 @@
+"""
+Purpose
+    Recomputes proposer duties for a given epoch using the Ethereum spec
+    shuffle and a public beacon API, serving as an independent cross-check.
+
+Usage
+    python3 collectors/fetch_proposers.py
+
+Notes
+    This script prints results to stdout. Adjust TARGET_EPOCH or API_BASE
+    inside the file for other epochs or endpoints.
+"""
+
 import requests
 from eth2spec.phase0 import spec
 from eth2spec.utils.hash_function import hash

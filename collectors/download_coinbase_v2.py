@@ -1,3 +1,17 @@
+"""
+Purpose
+    Downloads coinbase address and proposer metadata for execution blocks
+    by joining EL headers with CL headers from a public beacon API, then
+    writes results to DuckDB.
+
+Usage
+    python3 collectors/download_coinbase_v2.py -d <db> --start <n> --end <n> <table>
+
+Notes
+    Uses a public beacon API; rate limits and availability may affect
+    throughput. Blocks are uploaded in batches.
+"""
+
 import argparse
 import requests
 import logging
@@ -10,7 +24,8 @@ argparser = argparse.ArgumentParser(
     description="Downloads the coinbase addr of blocks from geth/prism"
 )
 argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
-argparser.add_argument('--start', default="21767881")
+argparser.add_argument('--start', default="24130000")
+argparser.add_argument('--end', default="23920000")
 argparser.add_argument('table')
 
 args = argparser.parse_args()
@@ -73,17 +88,15 @@ def download_block(block_num):
 def upload_data(blocks):
     df = pd.DataFrame(blocks)
     
-    # Create table if it doesn't exist
     try:
         conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM df WHERE FALSE")
     except:
         pass
     
-    conn.insert(DB_TABLE, df)
-    conn.commit()
+    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
 
 BLOCK_CURRENT = int(args.start)
-BLOCK_MIN = 21525891
+BLOCK_MIN = int(args.end)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')

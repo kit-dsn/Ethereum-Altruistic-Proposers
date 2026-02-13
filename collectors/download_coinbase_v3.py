@@ -1,3 +1,16 @@
+"""
+Purpose
+    Downloads coinbase address and proposer metadata in 100-block batches
+    using EL headers and the beaconcha.in execution-to-consensus mapping.
+
+Usage
+    python3 collectors/download_coinbase_v3.py -d <db> --key <api_key> --start <n> --end <n> <table>
+
+Notes
+    Requires a beaconcha.in API key. This path reduces CL RPC calls by
+    querying execution block mappings in bulk.
+"""
+
 import argparse
 import requests
 import logging
@@ -11,7 +24,8 @@ argparser = argparse.ArgumentParser(
 )
 argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
 argparser.add_argument('--key', help="beaconchain api key")
-argparser.add_argument('--start', default="21767881")
+argparser.add_argument('--start', default="24130000")
+argparser.add_argument('--end', default="23920000")
 argparser.add_argument('table')
 
 args = argparser.parse_args()
@@ -45,8 +59,18 @@ def fetch_cl_headers(block_num):
         f"https://beaconcha.in/api/v1/execution/block/{bnums}",
         headers={"apikey": args.key}
     )
-    data = r.json()["data"]
-    return sorted(data, key=lambda el: el["blockNumber"])
+    time.sleep(1)
+    
+    if r.status_code != 200:
+        logger.error(f"API error: {r.status_code} - {r.text}")
+        raise Exception(f"API returned status {r.status_code}: {r.text}")
+    
+    try:
+        data = r.json()["data"]
+        return sorted(data, key=lambda el: el["blockNumber"])
+    except KeyError as e:
+        logger.error(f"Invalid API response: {r.text}")
+        raise Exception(f"Invalid API response structure: {e}")
 
 def download_blocks(block_num):
     el_headers = []
@@ -81,11 +105,11 @@ def upload_data(blocks):
     except:
         pass
     
-    conn.insert(DB_TABLE, df)
-    conn.commit()
+    # Insert data using SQL
+    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
 
 BLOCK_CURRENT = int(args.start)
-BLOCK_MIN = 21525891
+BLOCK_MIN = int(args.end)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')

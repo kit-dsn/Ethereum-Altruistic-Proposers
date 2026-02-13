@@ -1,50 +1,13 @@
 """
-    Problem:
-# curl localhost:3500/eth/v1/beacon/headers?parent_root=0x7417497b58b0cd2e0e5f77736f6554ad7744d485b3ca175b247bbf3cfb86d62f | jq
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  1292  100  1292    0     0  52103      0 --:--:-- --:--:-- --:--:-- 53833
-{
-  "data": [
-    {
-      "header": {
-        "message": {
-          "slot": "11052946",
-          "proposer_index": "799107",
-          "parent_root": "0x7417497b58b0cd2e0e5f77736f6554ad7744d485b3ca175b247bbf3cfb86d62f",
-          "state_root": "0xd8acd133308d196a21505275b84920d062552b1d9004c439db8340cfdd52d963",
-          "body_root": "0xf1aef64a0ad2d59e56f281eb4788c09ba45c1dde5f68ca3defd6f3cf0296868f"
-        },
-        "signature": "0x91672cfaad5014adf5c27feae2d599993160953a2afdfa46c5db4565e3e9d7231e5c11591fd8161a0244fd04aa1378e10e25c01dd128aa5e39dc4f0853fbaf7d9dec5143a69b393fd22711e940d88749d4dbf6f3599eda4922e95851352870aa"
-      },
-      "root": "0xe14c45149a589accb748eac323517c02d251bd11bd75dd5e2b579f23980a895b",
-      "canonical": false
-    },
-    {
-      "header": {
-        "message": {
-          "slot": "11052947",
-          "proposer_index": "560319",
-          "parent_root": "0x7417497b58b0cd2e0e5f77736f6554ad7744d485b3ca175b247bbf3cfb86d62f",
-          "state_root": "0xff818bcba505f6ba9efee1aaa9e859c16b1c5d9f29e49a38848f595406c125a5",
-          "body_root": "0xf08f5f1421154cf1058e5485a15b200fe652edc9f4eac574b6560cc399ddcada"
-        },
-        "signature": "0x917e9a67027d062ea1718906dc44b8a72dfba2084c307154f7ead8fc42c570b5882a994b682d55fb80b5f20a27aee22208e4ae706e74b0bf5920e0253165f68d14e53e66314a84ddecf8dc13c535b6421c2b3ef533e550114f3ed3250dfb7ee1"
-      },
-      "root": "0xaf185f330afc57274f793a9db8901e342b9802bf29ee3da53118e03f514962ca",
-      "canonical": true
-    }
-  ],
-  "execution_optimistic": true,
-  "finalized": false
-}
+Purpose
+    Validates stored slot numbers against fresh CL headers and records any
+    mismatches for later correction.
 
--> we fetched the wrong slot number from the Beacon API...
+Usage
+    python3 collectors/recheck_coinbase.py -d <db> --start <n> --end <n> <table>
 
-Example: SELECT slot FROM coinbase_blocks WHERE block_number = 21838359;
-=> 11052946 (WRONG, should be 11052947)
-
-Let's go through all of them again...
+Outputs
+    recheck_coinbase-results.json with block_number, saved, correct.
 """
 
 import argparse
@@ -60,13 +23,14 @@ argparser = argparse.ArgumentParser(
     description="Checks the slot numbers again"
 )
 argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
-argparser.add_argument('--start', default="22385293")
+argparser.add_argument('--start', default="24130000")
+argparser.add_argument('--end', default="23920000")
 argparser.add_argument('table')
 
 args = argparser.parse_args()
 
 EL_API_BASE = "http://localhost:8504"
-CL_API_BASE = "http://localhost:3500"
+CL_API_BASE = "http://localhost:5052"
 
 DB = args.database
 DB_TABLE = args.table
@@ -106,7 +70,7 @@ def fetch_saved_slot(block_number):
     
 
 BLOCK_CURRENT = int(args.start)
-BLOCK_MIN = 21767881
+BLOCK_MIN = int(args.end)
 
 RESULTS = []
 

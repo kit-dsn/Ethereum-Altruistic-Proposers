@@ -1,3 +1,18 @@
+"""
+Purpose
+    Computes block-level ordering and privacy indicators for non-relaying
+    proposer clusters and stores the results in DuckDB for downstream
+    analysis.
+
+Inputs
+    - DuckDB with mempool and coinbase tables.
+    - JSON files in out/ describing non-relaying clusters.
+    - Execution-layer RPC at http://localhost:8504.
+Notes
+    Fail-fast assertions ensure data consistency between cluster metadata
+    and observed coinbase blocks.
+"""
+
 import requests
 import json
 import pandas as pd
@@ -178,8 +193,8 @@ def upload_data(blocks):
     except:
         pass
     
-    conn.insert(DB_TABLE, df)
-    conn.commit()
+    # Insert data using SQL
+    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
 
 # skip idx 1 -> lido
 for cix in range(int(args.start),len(non_relaying_clusters)):

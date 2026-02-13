@@ -1,3 +1,23 @@
+"""
+Purpose
+    Executes analysis scripts in an order based on explicit
+    dependencies declared inside each script. This ensures that derived
+    datasets and figures are generated in a reproducible sequence.
+
+How it works
+    Each analysis script in the analyse/ directory may declare dependencies
+    in a single-line header of the form:
+        # depends_on: other_script.py, another_script.py
+    The dependency graph is topologically sorted. If a cycle is detected,
+    execution stops with an explicit error to prevent ambiguous results.
+
+Usage
+    Run from the project root:
+        python3 run_scripts.py
+    The script will execute all .py files in analyse/ respecting declared
+    dependencies; scripts without dependencies are executed first.
+"""
+
 import os
 import re
 from collections import defaultdict, deque

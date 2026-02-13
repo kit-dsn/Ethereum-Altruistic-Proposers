@@ -8,3 +8,5 @@ pyvenv.cfg
 cache/*.json
 
 *.pyc
+
+nohup.out

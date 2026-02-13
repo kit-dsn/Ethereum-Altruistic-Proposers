@@ -1,3 +1,16 @@
+"""
+Purpose
+    Downloads coinbase address and proposer metadata by combining EL block
+    headers with local CL header data, then stores results in DuckDB.
+
+Usage
+    python3 collectors/download_coinbase.py -d <db> --start <n> --end <n> <table>
+
+Notes
+    Expects local EL and CL endpoints. Blocks are buffered and uploaded in
+    batches to reduce database overhead.
+"""
+
 import argparse
 import requests
 import logging
@@ -10,13 +23,14 @@ argparser = argparse.ArgumentParser(
     description="Downloads the coinbase addr of blocks from geth/prism"
 )
 argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
-argparser.add_argument('--start', default="22385293")
+argparser.add_argument('--start', default="24130000")
+argparser.add_argument('--end', default="23920000")
 argparser.add_argument('table')
 
 args = argparser.parse_args()
 
 EL_API_BASE = "http://localhost:8504"
-CL_API_BASE = "http://localhost:3500"
+CL_API_BASE = "http://localhost:5052"
 
 DB = args.database
 DB_TABLE = args.table
@@ -64,11 +78,11 @@ def upload_data(blocks):
     except:
         pass
     
-    conn.insert(DB_TABLE, df)
-    conn.commit()
+    # Insert data using SQL
+    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
 
 BLOCK_CURRENT = int(args.start)
-BLOCK_MIN = 21525891
+BLOCK_MIN = int(args.end)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')

@@ -1,10 +1,26 @@
+"""
+Purpose
+    Re-downloads a subset of blocks with known slot mismatches and writes a
+    corrected table for migration purposes.
+
+Inputs
+    - out/recheck_coinbase-results.json
+    - DuckDB with coinbase_blocks
+
+Usage
+    python3 collectors/recheck_coinbase_migrate.py
+
+Notes
+    Uses local EL/CL endpoints; cached JSON output is reused if present.
+"""
+
 import pandas as pd
 import duckdb
 import requests
 import os
 
 
-CL_API_BASE = "http://localhost:3500"
+CL_API_BASE = "http://localhost:5052"
 EL_API_BASE = "http://localhost:8504"
 DB = "/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb"
 
@@ -51,9 +67,6 @@ def download_block(block_num):
         "extra_data": el_header["extraData"]
     }
 
-metadata = MetaData()
-metadata.reflect(bind=engine)
-
 if not os.path.exists('out/recheck_coinbase_migrate.json'):
     database = database.merge(df, left_on='block_number', right_on='block_number')
 
@@ -67,6 +80,9 @@ if not os.path.exists('out/recheck_coinbase_migrate.json'):
 else:
     results = pd.read_json('out/recheck_coinbase_migrate.json')
 
-with engine.connect() as conn:
-    conn.execute(metadata.tables['coinbase_blocks_fixed'].insert(), results.to_dict('records'))
-    conn.commit()
+try:
+    conn.execute("CREATE TABLE IF NOT EXISTS coinbase_blocks_fixed AS SELECT * FROM results WHERE FALSE")
+except:
+    pass
+
+conn.execute("INSERT INTO coinbase_blocks_fixed SELECT * FROM results")

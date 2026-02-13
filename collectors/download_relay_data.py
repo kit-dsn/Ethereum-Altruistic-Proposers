@@ -1,3 +1,16 @@
+"""
+Purpose
+    Collects proposer_payload_delivered traces from a relay API and stores
+    them in DuckDB for PBS/MEV analyses.
+
+Usage
+    python3 collectors/download_relay_data.py <relay_url> -d <db> --start <slot> --end <slot> <table>
+
+Notes
+    Implements retry-on-failure with backoff. Data are inserted incrementally
+    to allow long-range collection runs.
+"""
+
 import requests
 import time
 import logging
@@ -11,7 +24,8 @@ argparser = argparse.ArgumentParser(
 )
 argparser.add_argument('url')
 argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
-argparser.add_argument('--start', type=int, default=11602798)
+argparser.add_argument('--start', type=int, default=13360718)
+argparser.add_argument('--end', type=int, default=13148718)
 argparser.add_argument('table')
 
 args = argparser.parse_args()
@@ -21,6 +35,22 @@ DB = args.database
 DB_TABLE = args.table
 
 conn = duckdb.connect(DB)
+
+# Create table if it doesn't exist
+conn.execute(f"""
+    CREATE TABLE IF NOT EXISTS {DB_TABLE} (
+        slot BIGINT,
+        block_number BIGINT,
+        block_hash VARCHAR,
+        builder_pk VARCHAR,
+        proposer_pk VARCHAR,
+        proposer_fee_recipient VARCHAR,
+        gas_limit BIGINT,
+        gas_used BIGINT,
+        value HUGEINT,
+        num_tx INTEGER
+    )
+""")
 
 def query_payloads(idx_slot, relay, limit):
     while True:
@@ -49,18 +79,12 @@ def query_payloads(idx_slot, relay, limit):
     return df
 
 def upload_data(slots):
-    # Create table if it doesn't exist
-    try:
-        conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM slots WHERE FALSE")
-    except:
-        pass
-    
-    conn.insert(DB_TABLE, slots)
-    conn.commit()
+    # Insert data using SQL
+    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM slots")
 
 
 SLOT_CURRENT = args.start
-SLOT_MIN = 10738799
+SLOT_MIN = args.end
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
@@ -74,4 +98,4 @@ while SLOT_CURRENT > SLOT_MIN:
     logger.info(f"Set current slot {SLOT_CURRENT}")
     upload_data(slots)
     logger.info(f"Dataset uploaded to database...")
-    time.sleep(10)
+    time.sleep(2)

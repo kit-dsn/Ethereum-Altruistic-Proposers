@@ -1,3 +1,16 @@
+"""
+Purpose
+    Resolves validator deposit metadata and maps public keys to proposer
+    indices, then stores the results in DuckDB.
+
+Usage
+    python3 collectors/download_deposit_addr.py -d <db> --key <api_key> <table>
+
+Notes
+    Requires a beaconcha.in API key and a local CL endpoint for validator
+    pubkeys. Validators are processed in chunks to respect API limits.
+"""
+
 import argparse
 import requests
 import logging
@@ -20,7 +33,7 @@ DB_TABLE = args.table
 
 conn = duckdb.connect(DB)
 
-CL_API_BASE = "http://localhost:3500"
+CL_API_BASE = "http://localhost:5052"
 
 def fetch_deposits(validator_list):
     assert len(validator_list) <= 100
@@ -63,8 +76,8 @@ def upload_data(df):
     except:
         pass
     
-    conn.insert(DB_TABLE, df)
-    conn.commit()
+    # Insert data using SQL
+    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
  
 
 

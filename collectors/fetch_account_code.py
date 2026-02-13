@@ -1,3 +1,16 @@
+"""
+Purpose
+    Determines whether coinbase addresses are EOAs or contracts by querying
+    EL code for each address, then stores the classification in DuckDB.
+
+Usage
+    python3 collectors/fetch_account_code.py -d <db> -t <table>
+
+Notes
+    Uses eth_getCode on a local EL endpoint. Inserts are batched to reduce
+    write overhead.
+"""
+
 import requests
 import argparse
 import duckdb
@@ -38,9 +51,9 @@ def upload_data(payload):
     except:
         pass
     
-    # Use INSERT OR IGNORE for upsert behavior
+    # Insert data using SQL with upsert behavior
     try:
-        conn.insert(DB_TABLE, df)
+        conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
     except:
         # If insert fails, it might be a duplicate, continue
         for _, row in df.iterrows():
