@@ -1,3 +1,15 @@
+"""
+Purpose
+    Maps non-relaying coinbase clusters to their associated proposers and
+    exports merged cluster-proposer lists.
+
+Usage
+    python3 analyse/proposer_clusters_merged.py
+
+Outputs
+    out/proposer_clusters_merged.json
+"""
+
 # depends_on: proposer_clusters.py,proposer_collaboration.py
 import pandas as pd
 import json

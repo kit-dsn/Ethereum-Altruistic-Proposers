@@ -1,3 +1,15 @@
+"""
+Purpose
+    Generates an HTML meta-overview that aggregates key results across
+    analysis steps for reporting or paper drafting.
+
+Usage
+    python3 analyse/meta-overview.py
+
+Outputs
+    HTML report in out/ (see script for filename).
+"""
+
 # depends_on: coinbase_clusters.py,non_mev_coinbase_clusters_eoa_ca.py,proposer_collaboration.py,interacting_with_builders.py,including_xof.py,ordering_clusters.py
 import pandas as pd
 from itertools import chain
@@ -183,7 +195,6 @@ with open("out/non_mev_coinbase_clusters_eoa_ca.json") as file:
 """
 
 htmlOut += "<h2>CA Contract Types</h2>"
-htmlOut += "<p>Patrick analysed the contracts</p>"
 
 htmlOut += ca_contract_types.to_html()
 

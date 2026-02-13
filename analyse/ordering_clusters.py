@@ -1,3 +1,15 @@
+"""
+Purpose
+    Evaluates transaction ordering behavior for non-relaying proposers that
+    do not include private transactions, and summarizes correlation metrics.
+
+Usage
+    python3 analyse/ordering_clusters.py
+
+Outputs
+    Histogram PDFs and out/ordering_clusters.json.
+"""
+
 # depends_on: including_xof.py
 import utils.query
 import pandas as pd

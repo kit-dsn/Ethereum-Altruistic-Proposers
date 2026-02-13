@@ -1,3 +1,12 @@
+"""
+Purpose
+    Generates cluster-size distribution for EOA coinbase clusters
+    with relay fraction overlays.
+
+Usage
+    python3 analyse/cluster_size_distribution.py
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -58,7 +67,7 @@ ax.set_xlabel('Cluster Size: Number of Proposer Sharing a Coinbase Address')
 ax.set_ylabel('Number of Clusters')
 ax.set_xlim(0.5, ax.get_xlim()[1])
 
-ax2.set_ylim(0, 1)  # linear scale between 0 and 1
+ax2.set_ylim(0, 1)
 ax2.set_ylabel('Share of Proposed Blocks')
 ax2.fill_between(
     np.append(cluster_sizes_eoa.index, ax2.get_xlim()[1]),
@@ -68,4 +77,4 @@ ax2.fill_between(
     color="orange",
     zorder=0,
 )
-fig.savefig("out/figure-3.pdf")
+fig.savefig("out/cluster_size_distribution.pdf")

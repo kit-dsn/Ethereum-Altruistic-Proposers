@@ -1,3 +1,14 @@
+"""
+Purpose
+    Analyse whether proposer deposit addresses match coinbase clusters.
+
+Usage
+    python3 analyse/proposer_deposit.py
+
+Outputs
+    out/proposer_deposit-results.json
+"""
+
 # depends_on: proposer_clusters.py,proposer_collaboration.py,proposer_clusters_merged.py
 from itertools import chain
 import utils.query

@@ -1,3 +1,15 @@
+"""
+Purpose
+    Classifies non-relaying coinbase clusters into EOA or contract-address
+    groups and summarizes proposer counts and contract types.
+
+Usage
+    python3 analyse/non_mev_coinbase_clusters_eoa_ca.py
+
+Outputs
+    out/non_mev_coinbase_clusters_eoa_ca.json
+"""
+
 # depends_on: coinbase_clusters.py
 import pandas as pd
 from itertools import chain

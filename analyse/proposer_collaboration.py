@@ -1,3 +1,15 @@
+"""
+Purpose
+    Characterizes relay usage by proposers, exports proposer/coinbase
+    datasets, and generates relay-related figures.
+
+Usage
+    python3 analyse/proposer_collaboration.py
+
+Outputs
+    JSON exports and multiple PDF figures in out/.
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -229,4 +241,4 @@ fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,7))
 ax.plot(df.index.to_list(), df['count'])
 ax.scatter(df[df['relay_count'] != 0].index.to_list(), df[df['relay_count'] != 0]['relay_count'], c='red')
 ax.set_yscale('log')
-fig.savefig("out/proposer_collaboration-no-relaying-coinbases.pdf"))
+fig.savefig("out/proposer_collaboration-no-relaying-coinbases.pdf")

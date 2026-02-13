@@ -1,3 +1,15 @@
+"""
+Purpose
+    Compares coinbase cluster sizes for EOA vs contract addresses and
+    visualizes relay fractions and cumulative block shares.
+
+Usage
+    python3 analyse/coinbase_cluster_sizes_eoa_ca.py
+
+Notes
+    Requires precomputed account classifications and contract cluster JSON.
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

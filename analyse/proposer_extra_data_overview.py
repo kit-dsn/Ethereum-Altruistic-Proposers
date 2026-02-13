@@ -1,3 +1,15 @@
+"""
+Purpose
+    Produces an HTML overview of extra_data behavior across non-relaying
+    coinbase clusters, including global vs non-global patterns.
+
+Usage
+    python3 analyse/proposer_extra_data_overview.py
+
+Outputs
+    out/proposer_extra_data_overview.html and linked assets.
+"""
+
 # depends_on: proposer_extra_data.py,proposer_extra_data_organize.py,coinbase_clusters.py
 import pandas as pd
 import json

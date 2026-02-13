@@ -1,3 +1,15 @@
+"""
+Purpose
+    Summarizes validator inclusion of private transactions and relay usage
+    via nested pie charts.
+
+Usage
+    python3 analyse/private_transactions_validators.py
+
+Outputs
+    out/private_transactions_validators-pie-pubpriv-relay.pdf
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +39,6 @@ sql_query = """
 """
 
 df = utils.query.query_cache(sql_query)
-print(df) # 600135 rows
 
 # (nested) pie chart
 # inspired by https://matplotlib.org/stable/gallery/pie_and_polar_charts/nested_pie.html

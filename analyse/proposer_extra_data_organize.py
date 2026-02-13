@@ -1,3 +1,15 @@
+"""
+Purpose
+    Categorizes extra_data patterns across clusters and identifies common
+    transitions and pre-release usage signals.
+
+Usage
+    python3 analyse/proposer_extra_data_organize.py
+
+Outputs
+    JSON summaries and per-pattern figures in out/.
+"""
+
 # depends_on: proposer_extra_data.py
 import pandas as pd
 import os

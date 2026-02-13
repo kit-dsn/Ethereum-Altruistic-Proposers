@@ -1,3 +1,15 @@
+"""
+Purpose
+    Computes the share of blocks announced via relays and visualizes it as
+    a pie chart.
+
+Usage
+    python3 analyse/relay_proportion.py
+
+Outputs
+    out/relay_proportion-bar-chart.pdf
+"""
+
 import pandas as pd
 import numpy as np
 import duckdb

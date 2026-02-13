@@ -1,3 +1,12 @@
+"""
+Purpose
+    Relates coinbase address reuse to relay usage and visualizes cluster
+    sizes and relay fractions across validator groups.
+
+Usage
+    python3 analyse/coinbase_addr_and_relays.py
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
