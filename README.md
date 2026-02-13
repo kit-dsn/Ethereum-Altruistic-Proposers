@@ -3,6 +3,7 @@
 This repository contains the code and data-processing pipeline for a research paper on altruistic behavior among Ethereum block proposers.
 
 Original script author: Nils Henrik Beyer (usmos@student.kit.edu).
+
 Modifactions and contact person: patrick Spiesberger (patrick.spiesberger@kit.edu)
 
 ## Abstract
@@ -46,7 +47,7 @@ data. The default path in many scripts is:
    /data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb
 
 You can override this path in collector scripts with the -d/--database
-argument. Tables commonly used (created if not provided) include:
+argument. Tables used (created if not provided) include:
 
 - coinbase_blocks_all
 - relay_all
