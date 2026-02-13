@@ -1,7 +1,7 @@
 """
 Purpose
     Collects proposer_payload_delivered traces from a relay API and stores
-    them in DuckDB for PBS/MEV analyses.
+    them in DuckDB for PBS analyses.
 
 Usage
     python3 collectors/download_relay_data.py <relay_url> -d <db> --start <slot> --end <slot> <table>

@@ -72,13 +72,11 @@ def download_block(block_num):
 def upload_data(blocks):
     df = pd.DataFrame(blocks)
     
-    # Create table if it doesn't exist
     try:
         conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM df WHERE FALSE")
     except:
         pass
     
-    # Insert data using SQL
     conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
 
 BLOCK_CURRENT = int(args.start)
