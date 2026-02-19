@@ -27,8 +27,9 @@ A virtual environment is recommended, but any Python 3.11+ installation should w
     source .venv/bin/activate
 
 2) Install dependencies:
-
     pip install -r requirements.txt
+
+3) Export https://etherscan.io/accounts/label/mev-builder as .json and save export as "analyse/interacting_with_builders-builder-addrs.json" (login required)
 
 ## Dependencies
 
