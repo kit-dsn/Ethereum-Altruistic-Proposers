@@ -89,7 +89,7 @@ in a browser.
 - The analysis order is controlled through depends_on headers and run_scripts.py.
 
 ## Quick Start
-
 1) Ensure dependencies are installed and endpoints are available.
-2) Run the analysis pipeline:
-   python3 run_scripts.py
+2) Execute the collectors scripts to fetch all required data.
+3) Run the analysis pipeline:
+   > python3 run_scripts.py
