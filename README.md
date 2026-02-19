@@ -19,8 +19,7 @@ Ethereum's ideals of decentralization and censorship resistance are undermined i
 
 ## Installation
 
-This project is a Python-based research pipeline. A virtual environment is
-recommended, but any Python 3.11+ installation should work.
+A virtual environment is recommended, but any Python 3.11+ installation should work.
 
 1) Create and activate a virtual environment (optional but recommended):
 
