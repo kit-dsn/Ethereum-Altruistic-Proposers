@@ -4,7 +4,7 @@ This repository contains the code and data-processing pipeline for a research pa
 
 Original script author: Nils Henrik Beyer (usmos@student.kit.edu).
 
-Modifactions and contact person: patrick Spiesberger (patrick.spiesberger@kit.edu)
+Modifactions and contact person: Patrick Spiesberger (patrick.spiesberger@kit.edu)
 
 ## Abstract
 
