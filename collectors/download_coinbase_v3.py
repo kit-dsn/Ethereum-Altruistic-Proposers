@@ -24,8 +24,8 @@ argparser = argparse.ArgumentParser(
 )
 argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
 argparser.add_argument('--key', help="beaconchain api key")
-argparser.add_argument('--start', default="24130000")
-argparser.add_argument('--end', default="23920000")
+argparser.add_argument('--start', type=int, default=24130000)
+argparser.add_argument('--end', type=int, default=23920000)
 argparser.add_argument('table')
 
 args = argparser.parse_args()
@@ -35,6 +35,10 @@ CL_API_BASE = "https://ethereum-beacon-api.publicnode.com"
 
 DB = args.database
 DB_TABLE = args.table
+BATCH_SIZE = 100
+
+if args.start < args.end:
+    argparser.error("--start must be greater than or equal to --end")
 
 conn = duckdb.connect(DB)
 
@@ -50,11 +54,9 @@ def fetch_el_header(block_num):
     )
     return r.json()["result"]
 
-def fetch_cl_headers(block_num):
-    bnums = f"{block_num}"
-    for i in range(1,100):
-        bnums = bnums + f",{block_num + i}"
-    
+def fetch_cl_headers(block_numbers):
+    bnums = ",".join(str(block_num) for block_num in block_numbers)
+
     r = requests.get(
         f"https://beaconcha.in/api/v1/execution/block/{bnums}",
         headers={"apikey": args.key}
@@ -73,15 +75,12 @@ def fetch_cl_headers(block_num):
         raise Exception(f"Invalid API response structure: {e}")
 
 def download_blocks(block_num):
-    el_headers = []
-    
-    for i in range(100):
-        el_headers.append(fetch_el_header(block_num + i))
-    
-    cl_headers = fetch_cl_headers(block_num)
+    block_numbers = list(range(max(BLOCK_MIN, block_num - BATCH_SIZE + 1), block_num + 1))
+    el_headers = [fetch_el_header(number) for number in block_numbers]
+    cl_headers = fetch_cl_headers(block_numbers)
 
     blocks = []
-    for i in range(100):
+    for i in range(len(block_numbers)):
         assert cl_headers[i]["blockNumber"] == int(el_headers[i]["number"], 16)
         assert cl_headers[i]["blockHash"] == el_headers[i]["hash"]
 
@@ -108,8 +107,8 @@ def upload_data(blocks):
     # Insert data using SQL
     conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
 
-BLOCK_CURRENT = int(args.start)
-BLOCK_MIN = int(args.end)
+BLOCK_CURRENT = args.start
+BLOCK_MIN = args.end
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')

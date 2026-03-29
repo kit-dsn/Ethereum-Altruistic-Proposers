@@ -1,16 +1,32 @@
 """
 Purpose
     Imports monthly private transaction TSV data stored inside ZIP archives
-    into a DuckDB database with a staging table and a typed fact table.
+    into a DuckDB database.
+
+    Schema (private_transactions):
+        block_number            BIGINT
+        block_hash              VARCHAR
+        transaction_hash        VARCHAR  (unique)
+        transaction_index       INTEGER
+        from_address            VARCHAR
+        to_address              VARCHAR  (NULL for contract deployments)
+        gas                     BIGINT
+        gas_price_wei           UBIGINT  (NULL for EIP-1559 txs)
+        tx_type                 TINYINT
+        max_fee_per_gas_wei     UBIGINT  (NULL for legacy txs)
+        max_priority_fee_wei    UBIGINT  (NULL for legacy txs)
+
+    Strategy:
+        - No staging table: rows are cast and inserted directly per chunk.
+        - A small _imported_archives table tracks completed archives so the
+          script can resume safely after a crash.
+        - Indexes are created after all data is loaded.
 
 Usage
     python3 collectors/import_private_transactions.py
     python3 collectors/import_private_transactions.py \
         --input-dir /data/fast/historical_mempools/2025/private_transactions \
         --output-db /data/fast/historical_mempools/2025/private_transactions/private_transactions.duckdb
-
-Notes
-    Expects each archive to contain exactly one TSV file named like YYYYMM.tsv.
 """
 
 import argparse
@@ -23,8 +39,23 @@ import duckdb
 import pandas as pd
 
 
-RAW_TABLE = "private_transactions_raw"
 FACT_TABLE = "private_transactions"
+TRACKING_TABLE = "_imported_archives"
+
+# TSV columns we keep (ordered as they appear in the source)
+KEEP_COLS = [
+    "blockNumber",
+    "blockHash",
+    "transactionHash",
+    "transactionIndex",
+    "from",
+    "to",
+    "gas",
+    "gasPrice",
+    "type",
+    "maxFeePerGas",
+    "maxPriorityFeePerGas",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -72,97 +103,83 @@ def setup_logging(level: str) -> None:
 def ensure_schema(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS {RAW_TABLE} (
-            source_month VARCHAR,
-            source_archive VARCHAR,
-            blockNumber VARCHAR,
-            blockHash VARCHAR,
-            transactionHash VARCHAR,
-            transactionIndex VARCHAR,
-            "from" VARCHAR,
-            "to" VARCHAR,
-            gas VARCHAR,
-            gasPrice VARCHAR,
-            type VARCHAR,
-            maxFeePerGas VARCHAR,
-            maxPriorityFeePerGas VARCHAR,
-            maxFeePerBlobGas VARCHAR,
-            blobVersionedHashes VARCHAR,
-            ingested_at TIMESTAMP DEFAULT now()
-        )
-        """
-    )
-
-    conn.execute(
-        f"""
         CREATE TABLE IF NOT EXISTS {FACT_TABLE} (
-            source_month INTEGER NOT NULL,
-            source_archive VARCHAR NOT NULL,
-            block_number BIGINT NOT NULL,
-            block_hash VARCHAR NOT NULL,
-            transaction_hash VARCHAR NOT NULL,
-            transaction_index INTEGER NOT NULL,
-            from_address VARCHAR NOT NULL,
-            to_address VARCHAR,
-            gas BIGINT NOT NULL,
-            gas_price_wei HUGEINT,
-            tx_type TINYINT,
-            max_fee_per_gas_wei HUGEINT,
-            max_priority_fee_per_gas_wei HUGEINT,
-            max_fee_per_blob_gas_wei HUGEINT,
-            blob_versioned_hashes JSON,
-            ingested_at TIMESTAMP DEFAULT now()
+            block_number            BIGINT  NOT NULL,
+            block_hash              VARCHAR NOT NULL,
+            transaction_hash        VARCHAR NOT NULL,
+            transaction_index       INTEGER NOT NULL,
+            from_address            VARCHAR NOT NULL,
+            to_address              VARCHAR,
+            gas                     BIGINT  NOT NULL,
+            gas_price_wei           UBIGINT,
+            tx_type                 TINYINT,
+            max_fee_per_gas_wei     UBIGINT,
+            max_priority_fee_wei    UBIGINT
+        )
+        """
+    )
+    conn.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {TRACKING_TABLE} (
+            archive_name VARCHAR PRIMARY KEY
         )
         """
     )
 
+
+def build_indexes(conn: duckdb.DuckDBPyConnection) -> None:
+    logging.info("Building indexes …")
     conn.execute(
-        f"""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_{FACT_TABLE}_txhash
-        ON {FACT_TABLE}(transaction_hash)
-        """
+        f"CREATE UNIQUE INDEX IF NOT EXISTS idx_ptx_txhash ON {FACT_TABLE}(transaction_hash)"
     )
     conn.execute(
-        f"""
-        CREATE INDEX IF NOT EXISTS idx_{FACT_TABLE}_block
-        ON {FACT_TABLE}(block_number)
-        """
+        f"CREATE INDEX IF NOT EXISTS idx_ptx_block ON {FACT_TABLE}(block_number)"
     )
-    conn.execute(
-        f"""
-        CREATE INDEX IF NOT EXISTS idx_{FACT_TABLE}_month
-        ON {FACT_TABLE}(source_month)
-        """
-    )
+    logging.info("Indexes ready.")
 
 
 def list_archives(input_dir: Path, max_files: int) -> List[Path]:
-    archives = [p for p in sorted(input_dir.iterdir()) if p.is_file()]
+    archives = [
+        p
+        for p in sorted(input_dir.iterdir())
+        if p.is_file() and zipfile.is_zipfile(p)
+    ]
     if max_files > 0:
         archives = archives[:max_files]
     return archives
 
 
-def infer_month_from_inner_filename(inner_name: str) -> str:
-    stem = Path(inner_name).stem
-    if len(stem) == 6 and stem.isdigit():
-        return stem
-    raise ValueError(f"Could not infer YYYYMM from inner file name: {inner_name}")
+def archive_already_imported(conn: duckdb.DuckDBPyConnection, archive_name: str) -> bool:
+    row = conn.execute(
+        f"SELECT COUNT(*) FROM {TRACKING_TABLE} WHERE archive_name = ?",
+        [archive_name],
+    ).fetchone()
+    return int(row[0]) > 0
 
 
-def load_archive_to_raw(
+def mark_imported(conn: duckdb.DuckDBPyConnection, archive_name: str) -> None:
+    conn.execute(
+        f"INSERT OR IGNORE INTO {TRACKING_TABLE} VALUES (?)",
+        [archive_name],
+    )
+
+
+def infer_inner_filename(archive_path: Path) -> str:
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        names = [n for n in zf.namelist() if not n.endswith("/")]
+    if len(names) != 1:
+        raise ValueError(
+            f"Archive {archive_path.name} contains {len(names)} files; expected exactly 1 TSV"
+        )
+    return names[0]
+
+
+def load_archive(
     conn: duckdb.DuckDBPyConnection,
     archive_path: Path,
     chunk_size: int,
 ) -> int:
-    with zipfile.ZipFile(archive_path, "r") as zf:
-        names = [n for n in zf.namelist() if not n.endswith("/")]
-        if len(names) != 1:
-            raise ValueError(
-                f"Archive {archive_path.name} contains {len(names)} files; expected exactly 1 TSV"
-            )
-        inner_name = names[0]
-        source_month = infer_month_from_inner_filename(inner_name)
+    infer_inner_filename(archive_path)  # validates single-file assumption
 
     total_rows = 0
     reader = pd.read_csv(
@@ -170,114 +187,35 @@ def load_archive_to_raw(
         sep="\t",
         compression="zip",
         dtype=str,
+        usecols=KEEP_COLS,
         chunksize=chunk_size,
     )
 
     for chunk_id, chunk in enumerate(reader, start=1):
-        chunk["source_month"] = source_month
-        chunk["source_archive"] = archive_path.name
-
         conn.register("ptx_chunk", chunk)
         conn.execute(
             f"""
-            INSERT INTO {RAW_TABLE} (
-                source_month,
-                source_archive,
-                blockNumber,
-                blockHash,
-                transactionHash,
-                transactionIndex,
-                "from",
-                "to",
-                gas,
-                gasPrice,
-                type,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                maxFeePerBlobGas,
-                blobVersionedHashes
-            )
+            INSERT INTO {FACT_TABLE}
             SELECT
-                source_month,
-                source_archive,
-                blockNumber,
-                blockHash,
-                transactionHash,
-                transactionIndex,
-                "from",
-                "to",
-                gas,
-                gasPrice,
-                type,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                maxFeePerBlobGas,
-                blobVersionedHashes
+                CAST(blockNumber        AS BIGINT)  AS block_number,
+                blockHash                           AS block_hash,
+                transactionHash                     AS transaction_hash,
+                CAST(transactionIndex   AS INTEGER) AS transaction_index,
+                "from"                              AS from_address,
+                NULLIF("to", '')                    AS to_address,
+                CAST(gas                AS BIGINT)  AS gas,
+                CAST(NULLIF(gasPrice,           '') AS UBIGINT) AS gas_price_wei,
+                CAST(NULLIF(type,               '') AS TINYINT) AS tx_type,
+                CAST(NULLIF(maxFeePerGas,       '') AS UBIGINT) AS max_fee_per_gas_wei,
+                CAST(NULLIF(maxPriorityFeePerGas,'') AS UBIGINT) AS max_priority_fee_wei
             FROM ptx_chunk
             """
         )
         conn.unregister("ptx_chunk")
-
         total_rows += len(chunk)
-        logging.info(
-            "Loaded %s chunk %s (%s rows)",
-            archive_path.name,
-            chunk_id,
-            len(chunk),
-        )
+        logging.info("%s  chunk %s  (%s rows)", archive_path.name, chunk_id, len(chunk))
 
     return total_rows
-
-
-def upsert_typed_from_raw(conn: duckdb.DuckDBPyConnection) -> int:
-    before_count = conn.execute(f"SELECT COUNT(*) FROM {FACT_TABLE}").fetchone()[0]
-
-    conn.execute(
-        f"""
-        INSERT INTO {FACT_TABLE}
-        SELECT
-            CAST(r.source_month AS INTEGER) AS source_month,
-            r.source_archive AS source_archive,
-            CAST(r.blockNumber AS BIGINT) AS block_number,
-            r.blockHash AS block_hash,
-            r.transactionHash AS transaction_hash,
-            CAST(r.transactionIndex AS INTEGER) AS transaction_index,
-            r."from" AS from_address,
-            NULLIF(r."to", '') AS to_address,
-            CAST(r.gas AS BIGINT) AS gas,
-            CAST(NULLIF(r.gasPrice, '') AS HUGEINT) AS gas_price_wei,
-            CAST(NULLIF(r.type, '') AS TINYINT) AS tx_type,
-            CAST(NULLIF(r.maxFeePerGas, '') AS HUGEINT) AS max_fee_per_gas_wei,
-            CAST(NULLIF(r.maxPriorityFeePerGas, '') AS HUGEINT) AS max_priority_fee_per_gas_wei,
-            CAST(NULLIF(r.maxFeePerBlobGas, '') AS HUGEINT) AS max_fee_per_blob_gas_wei,
-            CASE
-                WHEN r.blobVersionedHashes IS NULL OR r.blobVersionedHashes = '' THEN NULL
-                ELSE CAST(r.blobVersionedHashes AS JSON)
-            END AS blob_versioned_hashes,
-            now() AS ingested_at
-        FROM {RAW_TABLE} r
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM {FACT_TABLE} f
-            WHERE f.transaction_hash = r.transactionHash
-        )
-        """
-    )
-
-    after_count = conn.execute(f"SELECT COUNT(*) FROM {FACT_TABLE}").fetchone()[0]
-    return int(after_count - before_count)
-
-
-def archive_already_imported(conn: duckdb.DuckDBPyConnection, archive_name: str) -> bool:
-    row = conn.execute(
-        f"""
-        SELECT COUNT(*)
-        FROM {FACT_TABLE}
-        WHERE source_archive = ?
-        """,
-        [archive_name],
-    ).fetchone()
-    return int(row[0]) > 0
 
 
 def main() -> None:
@@ -292,44 +230,35 @@ def main() -> None:
 
     archives = list_archives(input_dir, args.max_files)
     if not archives:
-        raise FileNotFoundError(f"No files found in input directory: {input_dir}")
+        raise FileNotFoundError(f"No ZIP archives found in: {input_dir}")
 
-    logging.info("Found %s archive files", len(archives))
+    logging.info("Found %s archives", len(archives))
 
     conn = duckdb.connect(str(output_db))
     try:
         ensure_schema(conn)
 
-        total_raw_rows = 0
+        total_rows = 0
+
         for archive in archives:
             if archive_already_imported(conn, archive.name):
-                logging.info("Skipping already imported archive %s", archive.name)
+                logging.info("Skip (already done): %s", archive.name)
                 continue
 
-            rows = load_archive_to_raw(conn, archive, args.chunk_size)
-            total_raw_rows += rows
-            logging.info("Finished archive %s with %s rows", archive.name, rows)
+            rows = load_archive(conn, archive, args.chunk_size)
+            mark_imported(conn, archive.name)
+            total_rows += rows
+            logging.info("Done: %s  (%s rows)", archive.name, rows)
 
-        inserted = upsert_typed_from_raw(conn)
-        logging.info("Inserted %s new rows into %s", inserted, FACT_TABLE)
-        logging.info("Loaded %s raw rows in this run", total_raw_rows)
+        build_indexes(conn)
 
         summary = conn.execute(
-            f"""
-            SELECT
-                MIN(source_month) AS min_month,
-                MAX(source_month) AS max_month,
-                COUNT(*) AS rows_total,
-                COUNT(DISTINCT source_month) AS months
-            FROM {FACT_TABLE}
-            """
+            f"SELECT COUNT(*), COUNT(DISTINCT block_number) FROM {FACT_TABLE}"
         ).fetchone()
         logging.info(
-            "Fact table summary: min_month=%s max_month=%s rows_total=%s months=%s",
+            "Finished. total_rows=%s distinct_blocks=%s",
             summary[0],
             summary[1],
-            summary[2],
-            summary[3],
         )
     finally:
         conn.close()

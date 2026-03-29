@@ -20,9 +20,14 @@ Usage
 
 import os
 import re
+import argparse
+import subprocess
+import sys
 from collections import defaultdict, deque
 
 SCRIPT_DIR = 'analyse'
+DEFAULT_DB_PATH = '/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb'
+DB_ENV_VAR = 'ANALYSE_DUCKDB_PATH'
 
 def parse_dependencies():
     deps = defaultdict(list)
@@ -64,15 +69,34 @@ def topological_sort(deps, scripts):
 
     return sorted_scripts
 
-def run_scripts(scripts):
+def run_scripts(scripts, database_path):
+    env = os.environ.copy()
+    env[DB_ENV_VAR] = database_path
+
     for script in scripts:
         print(f"▶ Running {script}...")
-        result = os.system(f'python3 {os.path.join(SCRIPT_DIR, script)}')
-        exitcode = os.waitstatus_to_exitcode(result)
+        completed = subprocess.run(
+            [sys.executable, os.path.join(SCRIPT_DIR, script)],
+            env=env,
+            check=False,
+        )
+        exitcode = completed.returncode
         if exitcode != 0:
             raise Exception("Python execution failed...")
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        prog='run_scripts.py',
+        description='Run analyse scripts in dependency order using one shared DuckDB path.',
+    )
+    parser.add_argument(
+        '-d',
+        '--database',
+        default=DEFAULT_DB_PATH,
+        help='DuckDB path exposed to analyse scripts via ANALYSE_DUCKDB_PATH.',
+    )
+    args = parser.parse_args()
+
     deps, scripts = parse_dependencies()
     ordered = topological_sort(deps, scripts)
-    run_scripts(ordered)
+    run_scripts(ordered, args.database)

@@ -17,7 +17,7 @@ import duckdb
 import pandas as pd
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altruistic_proposers/q4.duckdb")
 argparser.add_argument('-t', '--table', default="accounts")
 
 args = argparser.parse_args()

@@ -11,6 +11,7 @@ Outputs
 import pandas as pd
 import numpy as np
 import duckdb
+import os
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
@@ -40,7 +41,8 @@ sql_query2 = """
     AND relay_all.block_number IS NULL
 """
 
-conn = duckdb.connect('/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb')
+DEFAULT_DB_PATH = '/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb'
+conn = duckdb.connect(os.environ.get('ANALYSE_DUCKDB_PATH', DEFAULT_DB_PATH))
 df = conn.execute(sql_query).df()
 df2 = conn.execute(sql_query2).df() 
 
