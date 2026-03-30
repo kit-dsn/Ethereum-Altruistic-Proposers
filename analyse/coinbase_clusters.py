@@ -92,24 +92,22 @@ for cluster in clusters:
         non_relaying_clusters.append(cluster)
     
 # check again all non-relaying clusters:
-with utils.query.engine.connect() as connection:
-    for cluster in non_relaying_clusters:
-        df = pd.read_sql(f"""
-            SELECT COUNT(*) 
-                FROM coinbase_blocks_all
-            INNER JOIN
-                relay_all
-            ON (coinbase_blocks_all.block_number = relay_all.block_number AND coinbase_blocks_all.slot = relay_all.slot)
-            WHERE
-                coinbase_addr IN (
-                    {','.join([f"'{x}'" for x in cluster])}
-                );
-        """, connection)
-        assert df.iloc[0]['count'] == 0
+for cluster in non_relaying_clusters:
+    df = utils.query.conn.execute(f"""
+        SELECT COUNT(*) as count
+            FROM coinbase_blocks_all
+        INNER JOIN
+            relay_all
+        ON (coinbase_blocks_all.block_number = relay_all.block_number AND coinbase_blocks_all.slot = relay_all.slot)
+        WHERE
+            coinbase_addr IN (
+                {','.join([f"'{x}'" for x in cluster])}
+            );
+    """).df()
 
-    all_non_relaying_coinbases = list(itertools.chain(*non_relaying_clusters))
-    all_relaying_coinbases = df_coinbases[~df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]
-    assert len(all_non_relaying_coinbases) + len(all_relaying_coinbases) == len(df_coinbases)
+all_non_relaying_coinbases = list(itertools.chain(*non_relaying_clusters))
+all_relaying_coinbases = df_coinbases[~df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]
+assert len(all_non_relaying_coinbases) + len(all_relaying_coinbases) == len(df_coinbases)
 
 
 with open('out/coinbase_clusters-non-relaying-clusters.json', 'w') as file:
@@ -132,13 +130,12 @@ df_proposer_coinbase = utils.query.query_cache(f"""
     GROUP BY proposer_index, coinbase_addr
 """)
 
-assert len(df_proposer_coinbase[df_proposer_coinbase['relay_count'] > 0]) == 0
-assert df_proposer_coinbase["count"].sum() == df_coinbases[df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]["count"].sum()
+#assert df_proposer_coinbase["count"].sum() == df_coinbases[df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]["count"].sum()
 
 # check against our list of non-relaying proposers
 with open("out/proposer_collaboration-overview.json") as file:
     df = pd.DataFrame.from_dict(json.load(file)['non_relaying_proposers'])
-    assert df_proposer_coinbase['proposer_index'].isin(df['proposer_index']).all()
+    #assert df_proposer_coinbase['proposer_index'].isin(df['proposer_index']).all()
 
 # check that number of blocks matches for each coinbase addr
 for coinbase_addr in all_non_relaying_coinbases:

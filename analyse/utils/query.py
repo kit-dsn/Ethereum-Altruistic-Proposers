@@ -7,7 +7,7 @@ import duckdb
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-DEFAULT_DB_PATH = '/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb'
+DEFAULT_DB_PATH = '/data/fast/historical_mempools/altruistic_proposers/q1.duckdb'
 DB_PATH = os.environ.get('ANALYSE_DUCKDB_PATH', DEFAULT_DB_PATH)
 conn = duckdb.connect(DB_PATH)
 

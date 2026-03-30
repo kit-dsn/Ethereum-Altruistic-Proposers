@@ -23,7 +23,14 @@ with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
     geth_releases = json.load(file)
 
 def parse_extra_data(x):
-    b = bytes.fromhex(x[2:])
+    if not isinstance(x, str) or not x.startswith('0x'):
+        return None
+
+    try:
+        b = bytes.fromhex(x[2:])
+    except ValueError:
+        return None
+
     if (len(b) > 0):
         if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
             major = b[2]
@@ -69,7 +76,9 @@ while os.path.exists(f"out/proposer_extra_data/coinbase-{i}.json"):
         for ed in eds:
             if parse_extra_data(ed) is not None:
                 version = parse_extra_data(ed)
-                publication_block = geth_releases[version]          
+                publication_block = geth_releases.get(version)
+                if publication_block is None:
+                    continue
                 if blocks[blocks['extra_data'] == ed]['block_number'].min() < publication_block:
                     result['pre-usage'].append(i)
                     break
@@ -125,7 +134,7 @@ for follow_idx, follow_up in all_follow_ups.iterrows():
     c = follow_up['extra_data']
     n = follow_up['next_extra_data']
 
-    changes = all_patterns[all_patterns['extra_data'] == c][all_patterns['next_extra_data'] == n]
+    changes = all_patterns[(all_patterns['extra_data'] == c) & (all_patterns['next_extra_data'] == n)]
     
     change_ranges = []
     for idx, change in changes.iterrows():
@@ -144,8 +153,8 @@ for follow_idx, follow_up in all_follow_ups.iterrows():
         ax.plot([change[0], change[1]],[i, i])
 
     if parse_extra_data(n) is not None or parse_extra_data(c) is not None:
-        next_v_block = geth_releases[parse_extra_data(n)] if parse_extra_data(n) is not None else None
-        cur_v_block = geth_releases[parse_extra_data(c)] if parse_extra_data(c) is not None else None
+        next_v_block = geth_releases.get(parse_extra_data(n)) if parse_extra_data(n) is not None else None
+        cur_v_block = geth_releases.get(parse_extra_data(c)) if parse_extra_data(c) is not None else None
 
         for update in geth_releases.values():
             if update == next_v_block:

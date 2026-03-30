@@ -33,7 +33,12 @@ trivial_cases = pd.concat([
 ])
 trivial_cases = trivial_cases[~trivial_cases.index.duplicated(keep='first')]
 
-non_trivial_cases = proposer_extra_overall[proposer_extra_overall['num_proposers'] > 1][proposer_extra_overall['num_extra_data'] > 1][proposer_extra_overall['num_extra_data'] != proposer_extra_overall['num_proposers']]
+mask_non_trivial = (
+    (proposer_extra_overall['num_proposers'] > 1)
+    & (proposer_extra_overall['num_extra_data'] > 1)
+    & (proposer_extra_overall['num_extra_data'] != proposer_extra_overall['num_proposers'])
+)
+non_trivial_cases = proposer_extra_overall[mask_non_trivial]
 non_trivial_cases = non_trivial_cases.sort_values(by='num_proposers', ascending=False).reset_index(drop=True)
 
 htmlOut += f"""
@@ -87,9 +92,21 @@ htmlOut += "</details>"
 with open("out/proposer_extra_data_organize-categories.json") as file:
     organize_categories = json.load(file)
 
+def valid_positions(pos_list, df_len):
+    return [p for p in pos_list if isinstance(p, int) and 0 <= p < df_len]
+
+global_positions = valid_positions(organize_categories.get('global', []), len(non_trivial_cases))
+other_positions = valid_positions(organize_categories.get('other', []), len(non_trivial_cases))
+pre_usage_positions = valid_positions(organize_categories.get('pre-usage', []), len(non_trivial_cases))
+
+example_global_idx = global_positions[0] if len(global_positions) > 0 else None
+example_other_idx = other_positions[1] if len(other_positions) > 1 else (other_positions[0] if len(other_positions) > 0 else None)
+example_global_html = f"<img src=\"proposer_extra_data/coinbase-{example_global_idx}.pdf\"/>" if example_global_idx is not None else "n/a"
+example_other_html = f"<img src=\"proposer_extra_data/coinbase-{example_other_idx}.pdf\"/>" if example_other_idx is not None else "n/a"
+
 htmlOut += f"""
     <h2>Global Patterns</h2>
-    <p>Of these {len(non_trivial_cases)} coinbase-addr clusters, we found that {len(organize_categories['global'])} show a "global" behavior, while {len(organize_categories['other'])} did not.</p>
+    <p>Of these {len(non_trivial_cases)} coinbase-addr clusters, we found that {len(global_positions)} show a "global" behavior, while {len(other_positions)} did not.</p>
     <p>A "global" behavior means that there is a clear temporal distribution of extra_data values within that coinbase-addr cluster.</p>
     <table>
         <tr>
@@ -97,33 +114,33 @@ htmlOut += f"""
             <td>Example non-global behavior</td>
         </tr>
         <tr>
-            <td><img src="proposer_extra_data/coinbase-{organize_categories['global'][0]}.pdf"/></td>
-            <td><img src="proposer_extra_data/coinbase-{organize_categories['other'][1]}.pdf"/></td>
+            <td>{example_global_html}</td>
+            <td>{example_other_html}</td>
         </tr>
     </table>
     """
 
-global_coinbase = non_trivial_cases.iloc[organize_categories['global']]
-other_coinbase = non_trivial_cases.iloc[organize_categories['other']]
+global_coinbase = non_trivial_cases.iloc[global_positions]
+other_coinbase = non_trivial_cases.iloc[other_positions]
 other_without_lido = other_coinbase[1:]
 
 htmlOut += f"""
     <table border=1>
         <tr>
             <td>Global behavior</td>
-            <td>{len(organize_categories['global'])} ({len(organize_categories['global'])/len(non_trivial_cases) * 100}%) <br> coinbase-addr clusters</td>
+            <td>{len(global_positions)} ({(len(global_positions)/len(non_trivial_cases) * 100) if len(non_trivial_cases) > 0 else 0}%) <br> coinbase-addr clusters</td>
             <td>{global_coinbase['num_blocks'].sum()} blocks</td>
             <td>{global_coinbase['num_proposers'].sum()} validators</td>
         </tr>
         <tr>
             <td>No global behavior</td>
-            <td>{len(organize_categories['other'])} ({len(organize_categories['other'])/len(non_trivial_cases) * 100}%) <br> coinbase-addr clusters</td>
+            <td>{len(other_positions)} ({(len(other_positions)/len(non_trivial_cases) * 100) if len(non_trivial_cases) > 0 else 0}%) <br> coinbase-addr clusters</td>
             <td>{other_coinbase['num_blocks'].sum()} blocks</td>
             <td>{other_coinbase['num_proposers'].sum()} validators</td>
         </tr>
         <tr>
             <td>No global behavior (excluding Lido)</td>
-            <td>{len(organize_categories['other'][1:])} ({len(organize_categories['other'][1:])/len(non_trivial_cases) * 100}%) <br> coinbase-addr clusters</td>
+            <td>{max(len(other_positions)-1, 0)} ({(max(len(other_positions)-1, 0)/len(non_trivial_cases) * 100) if len(non_trivial_cases) > 0 else 0}%) <br> coinbase-addr clusters</td>
             <td>{other_without_lido['num_blocks'].sum()} blocks</td>
             <td>{other_without_lido['num_proposers'].sum()} validators</td>
         </tr>
@@ -131,15 +148,25 @@ htmlOut += f"""
 """
 
 # all_patterns + all_follow_ups
-all_patterns = pd.concat([pd.DataFrame.from_dict(x) for x in organize_categories['global_patterns']])
-all_patterns["pattern_index"] = (all_patterns.index == 0).cumsum()
-all_patterns = all_patterns.reset_index(drop=True)
+if len(organize_categories.get('global_patterns', [])) > 0:
+    all_patterns = pd.concat([pd.DataFrame.from_dict(x) for x in organize_categories['global_patterns']])
+    all_patterns["pattern_index"] = (all_patterns.index == 0).cumsum()
+    all_patterns = all_patterns.reset_index(drop=True)
+else:
+    all_patterns = pd.DataFrame(columns=['start_block', 'end_block', 'extra_data', 'pattern_index'])
 
 # table of all global behaviors
 htmlOut += "<details><summary>Table of global behavior</summary>"
 
 def parse_extra_data(x):
-    b = bytes.fromhex(x[2:])
+    if not isinstance(x, str) or not x.startswith('0x'):
+        return None
+
+    try:
+        b = bytes.fromhex(x[2:])
+    except ValueError:
+        return None
+
     if (len(b) > 0):
         if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
             # this is a geth extra_data
@@ -160,7 +187,14 @@ def parse_extra_data(x):
 
 # parsing geth version strings
 def parse_extra_data_version(x):
-    b = bytes.fromhex(x[2:])
+    if not isinstance(x, str) or not x.startswith('0x'):
+        return None
+
+    try:
+        b = bytes.fromhex(x[2:])
+    except ValueError:
+        return None
+
     if (len(b) > 0):
         if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
             major = b[2]
@@ -252,14 +286,16 @@ def summarize_pre_usage(idx):
     for ed in eds:
         if parse_extra_data_version(ed) is not None:
             version = parse_extra_data_version(ed)
-            publication_block = geth_releases[version]
+            publication_block = geth_releases.get(version)
+            if publication_block is None:
+                continue
             usage_block = blocks[blocks['extra_data'] == ed]['block_number'].min()
             if usage_block < publication_block:
                 out += f"Geth {version} used {publication_block - usage_block} blocks ahead<br>"
     
     return out
 
-pre_usage_clusters = non_trivial_cases.iloc[organize_categories['pre-usage']].copy()
+pre_usage_clusters = non_trivial_cases.iloc[pre_usage_positions].copy()
 print(pre_usage_clusters)
 pre_usage_clusters['Graph'] = [f"<a href='proposer_extra_data/coinbase-{i}.pdf'>Link</a>" for i in pre_usage_clusters.index]
 pre_usage_clusters["pre-usage"] = [summarize_pre_usage(idx) for idx in pre_usage_clusters.index]

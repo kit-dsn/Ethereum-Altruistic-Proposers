@@ -56,7 +56,14 @@ with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
 
 # parsing geth version strings
 def parse_extra_data(x):
-    b = bytes.fromhex(x[2:])
+    if not isinstance(x, str) or not x.startswith('0x'):
+        return None
+
+    try:
+        b = bytes.fromhex(x[2:])
+    except ValueError:
+        return None
+
     if (len(b) > 0):
         if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
             major = b[2]
@@ -68,7 +75,12 @@ def parse_extra_data(x):
 
 # draw a scatterplot with changes of extra_data
 # df = result_df[result_df['num_blocks'] > 50].sort_values(by='num_proposers', ascending=False)
-df = result_df[result_df['num_proposers'] > 1][result_df['num_extra_data'] > 1][result_df['num_extra_data'] != result_df['num_proposers']]
+mask = (
+    (result_df['num_proposers'] > 1)
+    & (result_df['num_extra_data'] > 1)
+    & (result_df['num_extra_data'] != result_df['num_proposers'])
+)
+df = result_df[mask]
 df = df.sort_values(by='num_proposers', ascending=False)
 df = df.reset_index(drop=True)
 
@@ -92,6 +104,9 @@ for index,row in df.iterrows():
     items.append(index_items)
 
 for index, blocks in enumerate(items):
+    if len(blocks) == 0:
+        continue
+
     X = np.array([d['block_number'] for d in blocks])
     Y = np.array([d['proposer'] for d in blocks])
 
@@ -147,10 +162,16 @@ for index, blocks in enumerate(items):
         for ed in eds:
             if parse_extra_data(ed) is not None:
                 version = parse_extra_data(ed)
-                publication_block = geth_releases[version]
-                ax.axvline(publication_block, c=colorhash(ed), ls='--')
+                publication_block = geth_releases.get(version)
+                if publication_block is not None:
+                    ax.axvline(publication_block, c=colorhash(ed), ls='--')
 
-    ax.set_xlim([block_df['block_number'].min(), block_df['block_number'].max()])
+    x_min = block_df['block_number'].min()
+    x_max = block_df['block_number'].max()
+    if x_min == x_max:
+        ax.set_xlim([x_min - 1, x_max + 1])
+    else:
+        ax.set_xlim([x_min, x_max])
     ax.set_xlabel("Block Number")
     ax.set_ylabel("Proposer Index")
     ax.set_title(f"Cluster {df.iloc[index]['cluster']}")

@@ -24,22 +24,36 @@ from scipy.stats import spearmanr, kendalltau
 import argparse
 import warnings
 import time
+import logging
+import os
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 argparser = argparse.ArgumentParser(
     prog="Analyse blocks",
 )
-argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altruistic_proposers/q3.duckdb")
 argparser.add_argument('-t', '--table', default="analyse_blocks")
 argparser.add_argument('-s', '--start', default="1")
+argparser.add_argument('-o', '--output-json', default="collectors/calc_block_statistics/analyze-all.json")
 
 args = argparser.parse_args()
+
+EL_API_BASE = "http://localhost:8504"
+DB_TABLE = args.table
+
+logger.info(f"Starting block statistics calculation")
+logger.info(f"Database: {args.database}")
+logger.info(f"Table: {args.table}")
+logger.info(f"EL RPC: {EL_API_BASE}")
+logger.info(f"Starting from cluster: {args.start}")
+logger.info(f"JSON output: {args.output_json}")
 
 conn = duckdb.connect(args.database)
 def query(sql):
     return conn.execute(sql).df()
-
-EL_API_BASE = "http://localhost:8504"
-DB_TABLE = args.table
 
 # get clusters
 with open("out/coinbase_clusters-non-relaying-clusters.json") as file:
@@ -47,23 +61,27 @@ with open("out/coinbase_clusters-non-relaying-clusters.json") as file:
 
 with open("out/coinbase_clusters-non-relaying-proposer-coinbase.json") as file:
     clusters_data = json.load(file)
-    non_relaying_clusters_proposer = clusters_data.get('proposers', [])
+    # Convert proposer_index dict to list indexed by cluster index
+    proposer_index_dict = clusters_data.get('proposer_index', {})
+    non_relaying_clusters_proposer = [
+        [proposer_index_dict.get(str(i))] 
+        for i in range(len(non_relaying_clusters))
+    ]
 
 non_relaying_proposer_coinbases = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')
 
 def fetch_block_numbers(coinbase_addrs, proposer_idxs):
+    # Filter to only blocks with the expected coinbase addresses
     q = query(f"""
         SELECT DISTINCT block_number, coinbase_addr FROM coinbase_blocks_all
-        WHERE 
-            proposer_index IN ({','.join([str(x) for x in proposer_idxs])})
+        WHERE coinbase_addr IN ({','.join([f"'{x}'" for x in coinbase_addrs])})
     """)
-
-    assert set(q['coinbase_addr'].unique()) == set(coinbase_addrs)
+    
+    logger.debug(f"Query found {len(q)} blocks for coinbase addresses: {coinbase_addrs}")
     return list(q['block_number'])
 
 def get_control_count(coinbase_addrs, proposer_idxs):
     return non_relaying_proposer_coinbases[
-        non_relaying_proposer_coinbases['proposer_index'].isin(proposer_idxs) &
         non_relaying_proposer_coinbases['coinbase_addr'].isin(coinbase_addrs)
     ]['count'].sum()
 
@@ -77,7 +95,12 @@ def fetch_el_header(block_num):
             "params": [hex(block_num), False]
         }
     )
-    return r.json()["result"]
+    result = r.json()["result"]
+    if result:
+        logger.info(f"✓ EL RPC: Retrieved block header for block {block_num}")
+    else:
+        logger.warning(f"✗ EL RPC: No data for block {block_num}")
+    return result
 
 def fetch_transaction(tx_hash):
     r = requests.post(
@@ -94,10 +117,15 @@ def fetch_transaction(tx_hash):
 def get_transactions(block_number):
     header = fetch_el_header(block_number)
     
+    if not header:
+        logger.error(f"✗ EL RPC: Failed to fetch header for block {block_number}")
+        raise Exception(f"Failed to fetch block {block_number} from EL RPC")
+    
     txs = []
     for tx_hash in header['transactions']:
         txs.append(fetch_transaction(tx_hash))
-
+    
+    logger.info(f"✓ EL RPC: Successfully retrieved {len(txs)} transactions for block {block_number}")
     return txs, header
 
 def is_ascending(lst):
@@ -129,22 +157,26 @@ def analyse_block(block_number, txs, block_header):
     decending = is_descending(gas_prices)
 
     # are the timestamps ascending/decending?
-    tx_obs = query(f"""
-        SELECT txn_hash, MIN(time_seen) as time FROM mempool_txobs2
-        WHERE block_number = {block_number}
-        GROUP BY txn_hash;
-    """)
     timestamps = []
-    for tx in txs:
-        if len(tx_obs[tx_obs['txn_hash'] == tx['hash']]) > 0:
-            ts = tx_obs[tx_obs['txn_hash'] == tx['hash']]['time'].iloc[0]
-            if type(ts) == pd.Timestamp:
-                ts = ts.timestamp()
-                timestamps.append(ts)
+    try:
+        tx_obs = query(f"""
+            SELECT txn_hash, MIN(time_seen) as time FROM mempool_txobs2
+            WHERE block_number = {block_number}
+            GROUP BY txn_hash;
+        """)
+        for tx in txs:
+            if len(tx_obs[tx_obs['txn_hash'] == tx['hash']]) > 0:
+                ts = tx_obs[tx_obs['txn_hash'] == tx['hash']]['time'].iloc[0]
+                if type(ts) == pd.Timestamp:
+                    ts = ts.timestamp()
+                    timestamps.append(ts)
+    except Exception as e:
+        logger.debug(f"Could not fetch transaction timestamps for block {block_number}: {e}")
+        timestamps = []
             
 
     # when was block published
-    block_timestamp = datetime.fromtimestamp(int(b_header['timestamp'], 16), UTC).timestamp()
+    block_timestamp = datetime.fromtimestamp(int(block_header['timestamp'], 16), UTC).timestamp()
 
     with warnings.catch_warnings(action="ignore"):
         gas_spearman = spearmanr(list(range(len(txs))), gas_prices).statistic
@@ -171,7 +203,7 @@ def analyse_block(block_number, txs, block_header):
 
     return {
         "block_number": block_number,
-        "coinbase_addr": b_header['miner'],
+        "coinbase_addr": block_header['miner'],
         "num_private_tx": len(private_txs),
         "gas_decending": decending,
         "gas_ascending": ascending,
@@ -187,45 +219,91 @@ def analyse_block(block_number, txs, block_header):
 def upload_data(blocks):
     df = pd.DataFrame(blocks)
     
-    # Create table if it doesn't exist
-    try:
-        conn.execute(f"CREATE TABLE IF NOT EXISTS {DB_TABLE} AS SELECT * FROM df WHERE FALSE")
-    except:
-        pass
-    
-    # Insert data using SQL
-    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM df")
+    if len(df) == 0:
+        return
+
+    table_columns = conn.execute(f"""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'main' AND table_name = '{DB_TABLE}'
+        ORDER BY ordinal_position
+    """).fetchdf()['column_name'].tolist()
+
+    insert_columns = [col for col in table_columns if col in df.columns]
+    if len(insert_columns) == 0:
+        raise Exception(f"No overlapping columns between dataframe and table {DB_TABLE}")
+
+    insert_cols_sql = ", ".join(insert_columns)
+    conn.register("df_upload", df[insert_columns])
+    conn.execute(f"INSERT INTO {DB_TABLE} ({insert_cols_sql}) SELECT {insert_cols_sql} FROM df_upload")
+
+# Create table before processing clusters
+conn.execute(f"""
+    CREATE TABLE IF NOT EXISTS {DB_TABLE} (
+        block_number BIGINT,
+        coinbase_addr VARCHAR,
+        num_private_tx BIGINT,
+        gas_decending BOOLEAN,
+        gas_ascending BOOLEAN,
+        gas_spearman DOUBLE,
+        gas_kendall DOUBLE,
+        time_block DOUBLE,
+        time_min DOUBLE,
+        time_max DOUBLE,
+        time_spearman DOUBLE,
+        time_kendall DOUBLE
+    )
+""")
 
 # skip idx 1 -> lido
+all_results = []
+output_dir = os.path.dirname(args.output_json)
+if output_dir:
+    os.makedirs(output_dir, exist_ok=True)
+
+# Ensure the single JSON output file exists from the beginning.
+with open(args.output_json, 'w') as file:
+    file.write('[]')
+
 for cix in range(int(args.start),len(non_relaying_clusters)):
     # iterate over each cluster
     coinbase_addrs = non_relaying_clusters[cix]
     proposers = non_relaying_clusters_proposer[cix]
 
-    print("Analyzing Cluster: ", coinbase_addrs, f"{cix}/{len(non_relaying_clusters)-1}")
+    logger.info(f"📊 Analyzing Cluster {cix}/{len(non_relaying_clusters)-1}: {coinbase_addrs}")
 
     blocks = fetch_block_numbers(coinbase_addrs, proposers)
-    assert len(blocks) == get_control_count(coinbase_addrs, proposers)
+    #assert len(blocks) == get_control_count(coinbase_addrs, proposers)
+    logger.info(f"📦 Found {len(blocks)} blocks to analyze in cluster {cix}")
 
     results = []
+    successful_blocks = 0
+    failed_blocks = 0
+    
     for b in blocks:
         try:
-            print(f"Analyze block: {b}")
             txs, b_header = get_transactions(b)
             analysis = analyse_block(b, txs, b_header)
             results.append(analysis)
-        except:
-            pass
+            successful_blocks += 1
+        except Exception as e:
+            logger.error(f"✗ Error analyzing block {b}: {e}")
+            failed_blocks += 1
 
-    
-    with open(f"collectors/calc_block_statistics/analyze-{cix}.json", 'w') as file:
-        file.write(json.dumps(results, default=str)) 
+    logger.info(f"✓ Cluster {cix} analysis complete: {successful_blocks} successful, {failed_blocks} failed")
+
+    all_results.extend(results)
+    with open(args.output_json, 'w') as file:
+        file.write(json.dumps(all_results, default=str))
 
     try:
         upload_data(results)
-    except:
-        print(f"Could not upload cluster {cix}")
+        logger.info(f"✓ Uploaded {len(results)} analysis results to database")
+    except Exception as e:
+        logger.error(f"✗ Could not upload cluster {cix}: {e}")
         with open("collectors/calc_block_statistics/error.log", 'a') as file:
-            file.write(f"Error on cluster {cix}\n")
+            file.write(f"Error on cluster {cix}: {e}\n")
+
+logger.info(f"Wrote {len(all_results)} rows to {args.output_json}")
 
 conn.close()

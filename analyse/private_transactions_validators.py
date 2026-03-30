@@ -83,11 +83,14 @@ out_text = [
 ]
 
 for i, p in enumerate(wedges):
+    if y2[i] == 0:
+        continue
     ang = (p.theta2 - p.theta1)/2. + p.theta1
     y = np.sin(np.deg2rad(ang))
     x = np.cos(np.deg2rad(ang))
     horizontalalignment = {-1: "right", 1: "left"}[int(np.sign(x))]
-    connectionstyle = f"angle,angleA=0,angleB={ang}"
+    safe_ang = ang if abs(ang % 180) > 1e-6 else ang + 0.1
+    connectionstyle = f"angle,angleA=0,angleB={safe_ang}"
     kw["arrowprops"].update({"connectionstyle": connectionstyle})
     ax.annotate(f"{out_text[i]}: {y2[i]}", xy=(x, y), xytext=(1.3*np.sign(x), 1.3*y),
                 horizontalalignment=horizontalalignment, **kw)

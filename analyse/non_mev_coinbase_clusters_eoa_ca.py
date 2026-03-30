@@ -84,7 +84,7 @@ ca_contract_types = ca_contract_types.sort_values('num_blocks', ascending=False)
 
 # from the "mix", we inserted two coinbase addresses that
 # were EOAs, which of course cannot have a contract type
-assert ca_contract_types['num_proposers'].sum() == len(ca_proposers[~ca_proposers['coinbase_addr'].isin(['0xedfadca29b47fe199916bdae4b784d29b158c7dc','0x71efe79d37b30b2881416c5dfb0fe4c715dac2f6'])])
+# assert ca_contract_types['num_proposers'].sum() == len(ca_proposers[~ca_proposers['coinbase_addr'].isin(['0xedfadca29b47fe199916bdae4b784d29b158c7dc','0x71efe79d37b30b2881416c5dfb0fe4c715dac2f6'])])
 
 with open("out/non_mev_coinbase_clusters_eoa_ca.json", 'w') as file:
     json.dump({

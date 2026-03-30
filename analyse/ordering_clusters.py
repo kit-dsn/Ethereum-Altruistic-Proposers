@@ -30,20 +30,20 @@ with open("out/including_xof.json") as file:
 
 df_strictly_ordered = utils.query.query_cache(f"""
     SELECT 
-        proposer_index,
-        COUNT(DISTINCT analyse_blocks3.block_number) as block_count,
-        COUNT(DISTINCT analyse_blocks3.block_number) FILTER (WHERE gas_decending = 'true' AND gas_ascending = 'false') as strictly_decending_blocks,
-        COUNT(DISTINCT analyse_blocks3.block_number) FILTER (WHERE gas_ascending = 'true' AND gas_decending = 'false') as strictly_ascending_blocks,
-        COUNT(DISTINCT analyse_blocks3.block_number) FILTER (WHERE gas_ascending = 'true' AND gas_decending = 'true') as empty_blocks
+        coinbase_blocks_all.proposer_index as proposer_index,
+        COUNT(DISTINCT analyse_blocks.block_number) as block_count,
+        COUNT(DISTINCT analyse_blocks.block_number) FILTER (WHERE gas_decending = 'true' AND gas_ascending = 'false') as strictly_decending_blocks,
+        COUNT(DISTINCT analyse_blocks.block_number) FILTER (WHERE gas_ascending = 'true' AND gas_decending = 'false') as strictly_ascending_blocks,
+        COUNT(DISTINCT analyse_blocks.block_number) FILTER (WHERE gas_ascending = 'true' AND gas_decending = 'true') as empty_blocks
     FROM
-        analyse_blocks3
+        analyse_blocks
     JOIN coinbase_blocks_all ON
-        (coinbase_blocks_all.block_number = analyse_blocks3.block_number)
+        (coinbase_blocks_all.block_number = analyse_blocks.block_number)
     WHERE
-        proposer_index IN (
+        coinbase_blocks_all.proposer_index IN (
             {','.join([f'{x}' for x in not_including_xof_proposers])}
         )
-    GROUP BY proposer_index
+    GROUP BY coinbase_blocks_all.proposer_index
     ORDER BY block_count DESC;
 """)
 
@@ -55,7 +55,7 @@ df_remaining = df_strictly_ordered[(df_strictly_ordered['block_count'] != df_str
 # calculate correlations (spearman/kendall) for block ordering per proposer
 df_remaining_correlation = utils.query.query_cache(f"""
         SELECT 
-            proposer_index,
+            coinbase_blocks_all.proposer_index as proposer_index,
             COUNT(*) as count,
             MIN(gas_spearman) as min_spearman, 
             AVG(gas_spearman) as avg_spearman, 
@@ -63,15 +63,15 @@ df_remaining_correlation = utils.query.query_cache(f"""
             MIN(gas_kendall) as min_kendall, 
             AVG(gas_kendall) as avg_kendall, 
             MAX(gas_kendall) as max_kendall
-        FROM analyse_blocks3
+        FROM analyse_blocks
         JOIN coinbase_blocks_all ON
-            (coinbase_blocks_all.block_number = analyse_blocks3.block_number)
+            (coinbase_blocks_all.block_number = analyse_blocks.block_number)
         WHERE
-            proposer_index IN (
+            coinbase_blocks_all.proposer_index IN (
                 {','.join([f'{x}' for x in list(df_remaining['proposer_index'])])}
             )
         AND (gas_decending = 'false' OR gas_ascending = 'false')
-        GROUP BY proposer_index
+        GROUP BY coinbase_blocks_all.proposer_index
     """)
 
 fig, ax = plt.subplots(nrows=1, ncols=1)

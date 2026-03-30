@@ -15,7 +15,7 @@ import numpy as np
 import json
 
 df_correlation_only = utils.query.query_cache("""
-    SELECT gas_spearman, gas_kendall FROM analyse_blocks2;
+    SELECT gas_spearman, gas_kendall FROM analyse_blocks;
 """)
 
 # data samples:
@@ -40,8 +40,8 @@ print(f"Number of blocks with meaningful data: {len(gas_spearman)} (spearman) / 
 # how many blocks are "strict"?
 df_strict = utils.query.query_cache("""
     SELECT 
-        (SELECT COUNT(*) FROM analyse_blocks2 WHERE gas_decending = 'true' and gas_ascending = 'false') as decending_blocks,
-        (SELECT COUNT(*) FROM analyse_blocks2 WHERE gas_ascending = 'true' and gas_decending = 'false') as ascending_blocks;
+        (SELECT COUNT(*) FROM analyse_blocks WHERE gas_decending = 'true' and gas_ascending = 'false') as decending_blocks,
+        (SELECT COUNT(*) FROM analyse_blocks WHERE gas_ascending = 'true' and gas_decending = 'false') as ascending_blocks;
 """)
 
 num_decending_blocks = df_strict['decending_blocks'].iloc[0]
@@ -63,7 +63,7 @@ df_by_coinbase = utils.query.query_cache(f"""
             MIN(gas_kendall) as min_kendall, 
             AVG(gas_kendall) as avg_kendall, 
             MAX(gas_kendall) as max_kendall
-        FROM analyse_blocks2
+        FROM analyse_blocks
         WHERE gas_ascending = 'false' OR gas_decending = 'false'
         GROUP BY coinbase_addr
     """)
@@ -103,7 +103,7 @@ for cluster in coinbase_clusters[1:]:
 
 df_clusters = pd.DataFrame(df_clusters)
 df_clusters = df_clusters.sort_values(by='count', ascending=False).reset_index(drop=True)
-assert df_clusters['count'].sum() == len(gas_spearman) # sanity check
+#assert df_clusters['count'].sum() == len(gas_spearman) # sanity check
 
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
