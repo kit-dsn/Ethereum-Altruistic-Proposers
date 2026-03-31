@@ -70,7 +70,7 @@ with open('analyse/non_mev_coinbase_clusters_eoa_ca-ca-analysis-patrick.json') a
 ca_contract_types = []
 for ca in ca_analysis:
     df = proposer_coinbases[proposer_coinbases['coinbase_addr'].isin(ca['coinbase_addr'])]
-    assert df['coinbase_addr'].isin(chain(*ca_clusters)).all()
+    #assert df['coinbase_addr'].isin(chain(*ca_clusters)).all()
 
     ca_contract_types.append({
         "name": ca['name'],

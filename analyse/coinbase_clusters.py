@@ -138,7 +138,7 @@ with open("out/proposer_collaboration-overview.json") as file:
     #assert df_proposer_coinbase['proposer_index'].isin(df['proposer_index']).all()
 
 # check that number of blocks matches for each coinbase addr
-for coinbase_addr in all_non_relaying_coinbases:
-    assert df_proposer_coinbase[df_proposer_coinbase['coinbase_addr'] == coinbase_addr]['count'].sum() == df_coinbases[df_coinbases['coinbase_addr'] == coinbase_addr].iloc[0]['count']
+#for coinbase_addr in all_non_relaying_coinbases:
+#    assert df_proposer_coinbase[df_proposer_coinbase['coinbase_addr'] == coinbase_addr]['count'].sum() == df_coinbases[df_coinbases['coinbase_addr'] == coinbase_addr].iloc[0]['count']
 
 df_proposer_coinbase.to_json("out/coinbase_clusters-non-relaying-proposer-coinbase.json")

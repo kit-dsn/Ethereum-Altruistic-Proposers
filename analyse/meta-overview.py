@@ -273,6 +273,7 @@ with open("out/including_xof.json") as file:
     json_obj = json.load(file)
     including_xof_proposers = json_obj['including_xof_proposers']
     not_including_xof_proposers = json_obj['not_including_xof_proposers']
+    altruistic_proposers = json_obj.get('altruistic_proposers', [])
 
 htmlOut += f"""
     <table border=1>
@@ -292,9 +293,14 @@ htmlOut += f"""
             <td>{len(including_xof_proposers) / total_num_proposers * 100} %</td>
         </tr>
         <tr>
-            <td>└ Proposers not including XOF</td>
+            <td>└ Potentially altruistic proposers (max 1 private TX per block)</td>
             <td>{len(not_including_xof_proposers)}</td>
             <td>{len(not_including_xof_proposers) / total_num_proposers * 100} %</td>
+        </tr>
+        <tr>
+            <td>└ Altruistic proposers (0 private TX)</td>
+            <td>{len(altruistic_proposers)}</td>
+            <td>{len(altruistic_proposers) / total_num_proposers * 100} %</td>
         </tr>
     </table>    
 """
@@ -307,6 +313,7 @@ with open("out/including_xof.json") as file:
     json_obj = json.load(file)
     including_xof_proposers = json_obj['including_xof_proposers']
     not_including_xof_proposers = json_obj['not_including_xof_proposers']
+    altruistic_proposers = json_obj.get('altruistic_proposers', [])
         </pre>
     </details>
 """
@@ -327,17 +334,17 @@ htmlOut += f"""
             <th>%</th>
         <tr>
         <tr>
-            <td>Proposers not including XOF</td>
-            <td>{len(not_including_xof_proposers)}</td>
-            <td>{len(not_including_xof_proposers) / total_num_proposers * 100} %</td>
+            <td>Altruistic proposers (0 private TX)</td>
+            <td>{len(altruistic_proposers)}</td>
+            <td>{len(altruistic_proposers) / total_num_proposers * 100} %</td>
         </tr>
         <tr>
-            <td>└ Proposers that order transactions strictly decending by gas price</td>
+            <td>└ Strictly descending by gas price (subset of altruistic)</td>
             <td>{len(strictly_decending_proposers)}</td>
             <td>{len(strictly_decending_proposers) / total_num_proposers * 100} %</td>
         </tr>
         <tr>
-            <td>└ Proposers that only published empty blocks</td>
+            <td>└ Only published empty blocks (subset of altruistic)</td>
             <td>{len(empty_block_proposer)}</td>
             <td>{len(empty_block_proposer) / total_num_proposers * 100} %</td>
         </tr>

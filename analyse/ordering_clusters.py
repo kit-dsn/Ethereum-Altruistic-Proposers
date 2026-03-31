@@ -26,7 +26,7 @@ import sys
 
 with open("out/including_xof.json") as file:
     json_obj = json.load(file)
-    not_including_xof_proposers = json_obj['not_including_xof_proposers']
+    altruistic_proposers = json_obj.get('altruistic_proposers', json_obj['not_including_xof_proposers'])
 
 df_strictly_ordered = utils.query.query_cache(f"""
     SELECT 
@@ -41,7 +41,7 @@ df_strictly_ordered = utils.query.query_cache(f"""
         (coinbase_blocks_all.block_number = analyse_blocks.block_number)
     WHERE
         coinbase_blocks_all.proposer_index IN (
-            {','.join([f'{x}' for x in not_including_xof_proposers])}
+            {','.join([f'{x}' for x in altruistic_proposers])}
         )
     GROUP BY coinbase_blocks_all.proposer_index
     ORDER BY block_count DESC;
