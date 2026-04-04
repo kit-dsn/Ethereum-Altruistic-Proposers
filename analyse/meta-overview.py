@@ -370,5 +370,28 @@ with open('out/ordering_clusters.json') as file:
     </details>
 """
 
+MERGE_INDEX = 428308
+
+pot_before = [p for p in not_including_xof_proposers if p < MERGE_INDEX]
+pot_after  = [p for p in not_including_xof_proposers if p >= MERGE_INDEX]
+alt_before = [p for p in remaining_proposers if p < MERGE_INDEX]
+alt_after  = [p for p in remaining_proposers if p >= MERGE_INDEX]
+
+FIRST_BIN_MAX = 41_934
+LATE_BIN_MIN  = 1_000_000
+LATE_BIN_MAX  = 2_096_647
+
+pot_first_bin = [p for p in not_including_xof_proposers if p < FIRST_BIN_MAX]
+pot_late_bin  = [p for p in not_including_xof_proposers if LATE_BIN_MIN <= p <= LATE_BIN_MAX]
+
+print(f"Potentially altruistic proposers: {len(not_including_xof_proposers)} total")
+print(f"  before Merge (index < {MERGE_INDEX}): {len(pot_before)}")
+print(f"  after  Merge (index >= {MERGE_INDEX}): {len(pot_after)}")
+print(f"  first bin (index < {FIRST_BIN_MAX}): {len(pot_first_bin)}")
+print(f"  late bin ({LATE_BIN_MIN} <= index <= {LATE_BIN_MAX}): {len(pot_late_bin)}")
+print(f"Altruistic proposers (remaining): {len(remaining_proposers)} total")
+print(f"  before Merge (index < {MERGE_INDEX}): {len(alt_before)}")
+print(f"  after  Merge (index >= {MERGE_INDEX}): {len(alt_after)}")
+
 with open("out/meta-overview.html", "w") as file:
     file.write(htmlOut)

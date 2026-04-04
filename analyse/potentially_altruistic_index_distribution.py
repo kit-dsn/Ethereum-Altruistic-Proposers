@@ -29,20 +29,27 @@ def apply_index_ticks(ax, min_index, max_index):
     ax.set_xticks(ticks, labels)
 
 
-def add_merge_line(ax, with_label=False, y_pos=None):
+def set_uniform_ylabel_position(axes, x_position=-0.11):
+    for ax in axes:
+        ax.yaxis.set_label_coords(x_position, 0.5)
+
+
+def add_merge_line(ax, with_label=False, y_pos=None, label_left=False):
     ax.axvline(MERGE_INDEX, color="black", linestyle="--", lw=1.0)
     if with_label:
         if y_pos is None:
             y_pos = 0.74
+        x_offset = -8 if label_left else 8
+        horizontal_alignment = "right" if label_left else "left"
         ax.annotate(
             "The Merge",
             xy=(MERGE_INDEX, y_pos),
             xycoords=("data", "axes fraction"),
-            xytext=(8, 0),
+            xytext=(x_offset, 0),
             textcoords="offset points",
             rotation=90,
             va="center",
-            ha="left",
+            ha=horizontal_alignment,
             clip_on=True,
         )
 
@@ -54,7 +61,10 @@ with open('out/including_xof.json') as file:
     json_obj = json.load(file)
     including_xof_proposers = json_obj['including_xof_proposers']
     not_including_xof_proposers = json_obj['not_including_xof_proposers']
-    altruistic_proposers = json_obj.get('altruistic_proposers', [])
+
+with open('out/ordering_clusters.json') as file:
+    json_obj = json.load(file)
+    altruistic_proposers = json_obj['remaining_proposers']
 
 min_index = all_proposers['proposer_index'].min()
 max_index = all_proposers['proposer_index'].max()
@@ -128,11 +138,11 @@ fig_three, (ax_all, ax_potential, ax_altruistic) = plt.subplots(
 
 ax_all.stairs(all_counts, bins, color='blue')
 add_merge_line(ax_all, with_label=False)
-ax_all.set_ylabel("All observed proposers")
+ax_all.set_ylabel("Distinctive proposers in Q1-Q3 2025")
 ax_all.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: format_int_de(x)))
 
 ax_potential.stairs(counts, bins, color='orange')
-add_merge_line(ax_potential, with_label=True)
+add_merge_line(ax_potential, with_label=True, label_left=True)
 ax_potential.set_ylabel("Potentially altruistic proposers")
 ax_potential.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: format_int_de(x)))
 
@@ -141,7 +151,7 @@ add_merge_line(ax_altruistic, with_label=False)
 ax_altruistic.set_title("Altruistic proposers")
 ax_altruistic.set_ylabel("Altruistic proposers")
 ax_altruistic.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: format_int_de(x)))
-ax_altruistic.set_xlabel(f"Validator Index ({format_int_de(validators_per_bin)} validators per bin)")
+ax_altruistic.set_xlabel(f"Validator Index ({format_int_de(validators_per_bin)} validators per bin)", fontsize=11)
 
 for axis in (ax_all, ax_potential, ax_altruistic):
     axis.set_xlim([min_index, max_index])
@@ -149,6 +159,7 @@ for axis in (ax_all, ax_potential, ax_altruistic):
 ax_all.set_title("All observed proposers")
 ax_potential.set_title("Potentially altruistic proposers")
 apply_index_ticks(ax_altruistic, min_index, max_index)
+set_uniform_ylabel_position((ax_all, ax_potential, ax_altruistic))
 
 fig.savefig("out/potentially_altruistic_index_both-histogram.pdf")
 fig_three.savefig("out/potentially_altruistic_index_three-histogram.pdf")
@@ -173,6 +184,7 @@ apply_index_ticks(ax2, min_index, max_index)
 ax2.set_xlabel("Proposer Index")
 ax2.set_ylabel("# proposers")
 ax2.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: format_int_de(x)))
+set_uniform_ylabel_position((ax, ax2))
 
 fig.savefig("out/potentially_altruistic_index_both-side-histogram.pdf")
 

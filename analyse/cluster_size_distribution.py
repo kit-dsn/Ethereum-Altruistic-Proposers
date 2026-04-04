@@ -50,6 +50,9 @@ cluster_block_number_cdf_eoa = cluster_block_number_cdf_eoa / cluster_block_numb
 fig, ax = plt.subplots(figsize=(10,5))
 ax2 = ax.twinx()
 
+axis_label_fontsize = 15
+tick_label_fontsize = 12
+
 def get_color(relay_fraction):
     if relay_fraction > 0 and relay_fraction < 0.5:
         return 'red'
@@ -60,12 +63,14 @@ def get_color(relay_fraction):
 ax.scatter(cluster_sizes_eoa.index, cluster_sizes_eoa.values, c=[get_color(x) for x in cluster_relay_fraction_eoa])
 ax.set_yscale('log')
 ax.set_xscale('log')
-ax.set_xlabel('Cluster Size: Number of Proposer Sharing a Coinbase Address')
-ax.set_ylabel('Number of Clusters')
+ax.set_xlabel('Cluster Size: Number of Proposer Sharing a Coinbase Address', fontsize=axis_label_fontsize)
+ax.set_ylabel('Number of Clusters', fontsize=axis_label_fontsize)
+ax.tick_params(axis='both', labelsize=tick_label_fontsize)
 ax.set_xlim(0.5, ax.get_xlim()[1])
 
 ax2.set_ylim(0, 1)
-ax2.set_ylabel('Share of Proposed Blocks')
+ax2.set_ylabel('Share of Proposed Blocks', fontsize=axis_label_fontsize)
+ax2.tick_params(axis='y', labelsize=tick_label_fontsize)
 ax2.fill_between(
     np.append(cluster_sizes_eoa.index, ax2.get_xlim()[1]),
     np.append(cluster_block_number_cdf_eoa.values, 1),
