@@ -33,9 +33,9 @@ argparser = argparse.ArgumentParser(
     description="Downloads proposer_payload_delivered from relay API and stores results inside DuckDB database"
 )
 argparser.add_argument('url')
-argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altrusitic_proposers/altrusitic_proposers.duckdb")
-argparser.add_argument('--start', type=int, default=13360718)
-argparser.add_argument('--end', type=int, default=13148718)
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altruistic_proposers/q4.duckdb")
+argparser.add_argument('--start', type=int, default=13366798)
+argparser.add_argument('--end', type=int, default=12704399)
 argparser.add_argument('table')
 
 args = argparser.parse_args()
@@ -43,12 +43,17 @@ args = argparser.parse_args()
 URL = args.url
 DB = args.database
 DB_TABLE = args.table
+TARGET_TABLE = "relay_payloads" if DB_TABLE == "relay_all" else DB_TABLE
 
 conn = duckdb.connect(DB)
 
+if DB_TABLE == "relay_all":
+    logging.warning("relay_all is treated as a derived view; writing raw relay rows into relay_payloads instead")
+
 # Create table if it doesn't exist
 conn.execute(f"""
-    CREATE TABLE IF NOT EXISTS {DB_TABLE} (
+    CREATE TABLE IF NOT EXISTS {TARGET_TABLE} (
+        relay_url VARCHAR,
         slot BIGINT,
         block_number BIGINT,
         block_hash VARCHAR,
@@ -70,6 +75,7 @@ def query_payloads(idx_slot, relay, limit):
             slots = []
             for s in r.json():
                 slots.append({
+                    "relay_url": relay,
                     "slot": int(s["slot"]),
                     "block_number": int(s["block_number"]),
                     "block_hash": s["parent_hash"],
@@ -90,7 +96,47 @@ def query_payloads(idx_slot, relay, limit):
 
 def upload_data(slots):
     # Insert data using SQL
-    conn.execute(f"INSERT INTO {DB_TABLE} SELECT * FROM slots")
+    conn.register("slots_upload", slots[[
+        "relay_url",
+        "slot",
+        "block_number",
+        "block_hash",
+        "builder_pk",
+        "proposer_pk",
+        "proposer_fee_recipient",
+        "gas_limit",
+        "gas_used",
+        "value",
+        "num_tx",
+    ]])
+    conn.execute(f"""
+        INSERT INTO {TARGET_TABLE} (
+            relay_url,
+            slot,
+            block_number,
+            block_hash,
+            builder_pk,
+            proposer_pk,
+            proposer_fee_recipient,
+            gas_limit,
+            gas_used,
+            value,
+            num_tx
+        )
+        SELECT
+            relay_url,
+            slot,
+            block_number,
+            block_hash,
+            builder_pk,
+            proposer_pk,
+            proposer_fee_recipient,
+            gas_limit,
+            gas_used,
+            value,
+            num_tx
+        FROM slots_upload
+    """)
 
 
 SLOT_CURRENT = args.start
@@ -108,4 +154,4 @@ while SLOT_CURRENT > SLOT_MIN:
     logger.info(f"Set current slot {SLOT_CURRENT}")
     upload_data(slots)
     logger.info(f"Dataset uploaded to database...")
-    time.sleep(2)
+    time.sleep(0.5)

@@ -20,22 +20,23 @@ Q -> Slot ranges
 """
 
 import argparse
+import json
 import logging
 import os
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import duckdb
 import pandas as pd
 import requests
 
 
-TITAN_RELAY = "https://titanrelay.xyz"
+TITAN_RELAY = "https://titanrelay.xyz/"
 
 QUARTERS: Dict[str, Tuple[int, int]] = {
-    "q1": (10738799, 11386798),
-    "q2": (11386799, 12041998),
-    "q3": (12041999, 12704398),
+#    "q1": (10738799, 11386798),
+#    "q2": (11386799, 12041998),
+#    "q3": (12041999, 12704398),
     "q4": (12704399, 13366798),
 }
 
@@ -73,14 +74,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--sleep-seconds",
         type=float,
-        default=0.50,
+        default=2,
         help="Sleep between successful API calls (increase if still rate-limited)",
     )
     parser.add_argument(
         "--max-retries",
         type=int,
-        default=10,
+        default=3,
         help="Maximum retries per request",
+    )
+    parser.add_argument(
+        "--failed-slots-file",
+        default="titan_failed_slots.json",
+        help="Filename (inside --output-dir) to write failed cursor slots to",
+    )
+    parser.add_argument(
+        "--slot-end",
+        type=int,
+        default=None,
+        help="Override the slot_end (starting cursor) for all quarters — useful to resume from a specific slot",
     )
     return parser.parse_args()
 
@@ -112,7 +124,7 @@ def fetch_batch(
     max_retries: int,
     sleep_on_retry: float,
     logger: logging.Logger,
-) -> List[dict]:
+) -> Optional[List[dict]]:
     endpoint = (
         f"{TITAN_RELAY}/relay/v1/data/bidtraces/proposer_payload_delivered"
         f"?cursor={cursor_slot}&limit={limit}"
@@ -144,14 +156,14 @@ def fetch_batch(
                         "num_tx": int(item["num_tx"]),
                     }
                 )
-            return rows
+            return rows  # [] means HTTP 200 but no data for this cursor
 
         except Exception as exc:  # noqa: BLE001
             # Use a longer base wait on 429 to respect rate limits.
             if hasattr(exc, "response") and getattr(exc.response, "status_code", None) == 429:
-                wait_seconds = min(120, max(sleep_on_retry * 2, 2**attempt))
+                wait_seconds = min(2, max(sleep_on_retry * 2, 2**attempt))
             else:
-                wait_seconds = min(60, 2**attempt)
+                wait_seconds = min(2, 2**attempt)
             logger.warning(
                 "Request failed (attempt %s/%s): %s. Retrying in %ss",
                 attempt,
@@ -162,7 +174,7 @@ def fetch_batch(
             time.sleep(wait_seconds)
 
     logger.error("Giving up on Titan request at cursor %s", cursor_slot)
-    return []
+    return None  # None means all retries exhausted (real network failure)
 
 
 def insert_rows(
@@ -206,12 +218,13 @@ def collect_titan_for_quarter(
     max_retries: int,
     sleep_seconds: float,
     logger: logging.Logger,
-) -> int:
+) -> Tuple[int, List[int]]:
     db_path = os.path.join(output_dir, f"{quarter}.duckdb")
     logger.info("Opening %s for Titan data (%s-%s)", db_path, slot_start, slot_end)
 
     conn = duckdb.connect(db_path)
     total_inserted = 0
+    failed_cursors: List[int] = []
     try:
         create_table_if_missing(conn, table_name)
 
@@ -226,8 +239,18 @@ def collect_titan_for_quarter(
                 logger=logger,
             )
 
+            if batch is None:
+                logger.warning(
+                    "Request failed at cursor %s — skipping ahead by %s slots (%s)",
+                    cursor, limit, quarter,
+                )
+                failed_cursors.append(cursor)
+                cursor -= limit
+                continue
+
             if not batch:
-                logger.warning("No batch returned at cursor %s — stopping %s", cursor, quarter)
+                # HTTP 200 but empty — Titan has no data here.
+                logger.info("No data at cursor %s — stopping %s", cursor, quarter)
                 break
 
             in_range = [row for row in batch if slot_start <= row["slot"] <= slot_end]
@@ -253,7 +276,7 @@ def collect_titan_for_quarter(
     finally:
         conn.close()
 
-    return total_inserted
+    return total_inserted, failed_cursors
 
 
 def main() -> None:
@@ -273,11 +296,13 @@ def main() -> None:
     )
 
     total = 0
+    all_failed: Dict[str, List[int]] = {}
     for quarter, (slot_start, slot_end) in QUARTERS.items():
-        inserted = collect_titan_for_quarter(
+        effective_slot_end = args.slot_end if args.slot_end is not None else slot_end
+        inserted, failed = collect_titan_for_quarter(
             quarter=quarter,
             slot_start=slot_start,
-            slot_end=slot_end,
+            slot_end=effective_slot_end,
             output_dir=args.output_dir,
             table_name=args.table,
             limit=args.limit,
@@ -287,7 +312,18 @@ def main() -> None:
             logger=logger,
         )
         total += inserted
-        logger.info("Finished %s — %s new rows from Titan", quarter, inserted)
+        if failed:
+            all_failed[quarter] = failed
+        logger.info(
+            "Finished %s — %s new rows from Titan, %s failed cursors",
+            quarter, inserted, len(failed),
+        )
+
+    if all_failed:
+        failed_path = os.path.join(args.output_dir, args.failed_slots_file)
+        with open(failed_path, "w") as fh:
+            json.dump(all_failed, fh, indent=2)
+        logger.info("Wrote failed cursors to %s", failed_path)
 
     logger.info("Done. Total Titan rows inserted across all quarters: %s", total)
 

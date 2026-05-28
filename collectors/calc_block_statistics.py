@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 argparser = argparse.ArgumentParser(
     prog="Analyse blocks",
 )
-argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altruistic_proposers/q3.duckdb")
+argparser.add_argument('-d', '--database', default="/data/fast/historical_mempools/altruistic_proposers/2025_overall.duckdb")
 argparser.add_argument('-t', '--table', default="analyse_blocks")
 argparser.add_argument('-s', '--start', default="1")
 argparser.add_argument('-o', '--output-json', default="collectors/calc_block_statistics/analyze-all.json")

@@ -12,8 +12,12 @@ import json
 import pandas as pd
 import numpy as np
 from itertools import chain
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+
+mpl.rcParams['pdf.fonttype'] = 42
+mpl.rcParams['ps.fonttype'] = 42
 
 
 MERGE_INDEX = 428308
@@ -76,9 +80,12 @@ print(f"Median index of potentially ordering proposers: {np.median(potentially_a
 print(f"Min/Max proposer index: {min_index}-{max_index}")
 
 
-counts, bins = np.histogram(potentially_altruistic_proposer_index, bins=50, range=(min_index, max_index))
+validators_per_bin = 50_000
+full_bin_count = int((max_index - min_index) // validators_per_bin)
+bins = min_index + np.arange(full_bin_count + 1) * validators_per_bin
+
+counts, bins = np.histogram(potentially_altruistic_proposer_index, bins=bins)
 altruistic_counts, _ = np.histogram(altruistic_proposers, bins=bins)
-validators_per_bin = int(round(bins[1] - bins[0]))
 
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8,5))
 
@@ -148,8 +155,8 @@ ax_potential.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: format_i
 
 ax_altruistic.stairs(altruistic_counts, bins, color='green')
 add_merge_line(ax_altruistic, with_label=False)
-ax_altruistic.set_title("Altruistic proposers")
-ax_altruistic.set_ylabel("Altruistic proposers")
+ax_altruistic.set_title("Strictly altruistic proposers")
+ax_altruistic.set_ylabel("Strictly altruistic proposers")
 ax_altruistic.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: format_int_de(x)))
 ax_altruistic.set_xlabel(f"Validator Index ({format_int_de(validators_per_bin)} validators per bin)", fontsize=11)
 

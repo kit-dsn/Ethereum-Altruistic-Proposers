@@ -18,10 +18,11 @@ Output
 """
 
 import argparse
+import json
 import logging
 import os
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import duckdb
 import pandas as pd
@@ -34,16 +35,16 @@ RELAYS: List[str] = [
     "https://bloxroute.max-profit.blxrbdn.com",
     "https://bloxroute.regulated.blxrbdn.com",
     "https://boost-relay.flashbots.net",
-    "https://titanrelay.xyz",
+    #"https://titanrelay.xyz",
     "https://relay-analytics.ultrasound.money",
     "https://relay.ethgas.com",
 ]
 
 # Inclusive ranges as provided.
 QUARTERS: Dict[str, Tuple[int, int]] = {
-    "q1": (10738799, 11386798),
-    "q2": (11386799, 12041998),
-    "q3": (12041999, 12704398),
+    #"q1": (10738799, 11386798),
+    #"q2": (11386799, 12041998),
+    #"q3": (12041999, 12704398),
     "q4": (12704399, 13366798),
 }
 
@@ -90,6 +91,17 @@ def parse_args() -> argparse.Namespace:
         default=10,
         help="Maximum retries per request",
     )
+    parser.add_argument(
+        "--failed-slots-file",
+        default="titan_failed_slots.json",
+        help="Filename (inside --output-dir) to append failed cursor slots to",
+    )
+    parser.add_argument(
+        "--slot-end",
+        type=int,
+        default=None,
+        help="Override the slot_end (starting cursor) for all quarters — useful to resume from a specific slot",
+    )
     return parser.parse_args()
 
 
@@ -120,7 +132,7 @@ def fetch_batch(
     timeout: int,
     max_retries: int,
     logger: logging.Logger,
-) -> List[dict]:
+) -> Optional[List[dict]]:
     endpoint = (
         f"{relay}/relay/v1/data/bidtraces/proposer_payload_delivered"
         f"?cursor={cursor_slot}&limit={limit}"
@@ -152,9 +164,9 @@ def fetch_batch(
                         "num_tx": int(item["num_tx"]),
                     }
                 )
-            return rows
+            return rows  # [] means HTTP 200 but relay has no data for this cursor
         except Exception as exc:  # noqa: BLE001
-            wait_seconds = min(60, 2**attempt)
+            wait_seconds = min(2, 2**attempt)
             logger.warning(
                 "Relay request failed (%s, attempt %s/%s): %s. Retrying in %ss",
                 relay,
@@ -166,7 +178,7 @@ def fetch_batch(
             time.sleep(wait_seconds)
 
     logger.error("Giving up on request for relay %s at cursor %s", relay, cursor_slot)
-    return []
+    return None  # None means all retries exhausted (real network failure)
 
 
 def insert_rows(
@@ -211,8 +223,9 @@ def collect_relay_for_range(
     max_retries: int,
     sleep_seconds: float,
     logger: logging.Logger,
-) -> int:
+) -> Tuple[int, List[int]]:
     total_inserted = 0
+    failed_cursors: List[int] = []
     cursor = slot_end
 
     logger.info("Relay %s | range %s-%s", relay, slot_start, slot_end)
@@ -227,8 +240,19 @@ def collect_relay_for_range(
             logger=logger,
         )
 
+        if batch is None:
+            # Real network failure after all retries — record cursor and skip ahead.
+            logger.warning(
+                "Request failed for relay %s at cursor %s — skipping ahead by %s slots",
+                relay, cursor, limit,
+            )
+            failed_cursors.append(cursor)
+            cursor -= limit
+            continue
+
         if not batch:
-            logger.warning("No batch returned for relay %s at cursor %s", relay, cursor)
+            # HTTP 200 but empty list — relay simply has no data here.
+            logger.info("Relay %s has no data at cursor %s — stopping", relay, cursor)
             break
 
         # Keep only rows inside the inclusive quarter range.
@@ -249,7 +273,7 @@ def collect_relay_for_range(
 
         time.sleep(sleep_seconds)
 
-    return total_inserted
+    return total_inserted, failed_cursors
 
 
 def collect_quarter(
@@ -263,7 +287,7 @@ def collect_quarter(
     max_retries: int,
     sleep_seconds: float,
     logger: logging.Logger,
-) -> None:
+) -> Dict[str, List[int]]:
     db_path = os.path.join(output_dir, f"{quarter}.duckdb")
     logger.info("Starting %s -> %s", quarter, db_path)
 
@@ -272,8 +296,9 @@ def collect_quarter(
         create_table(conn, table_name)
 
         quarter_inserted = 0
+        all_failed: Dict[str, List[int]] = {}
         for relay in RELAYS:
-            inserted = collect_relay_for_range(
+            inserted, failed = collect_relay_for_range(
                 conn=conn,
                 table_name=table_name,
                 relay=relay,
@@ -286,11 +311,16 @@ def collect_quarter(
                 logger=logger,
             )
             quarter_inserted += inserted
-            logger.info("%s | %s inserted rows (batch total)", quarter, inserted)
+            if failed:
+                key = f"{quarter}|{relay}"
+                all_failed[key] = failed
+            logger.info("%s | %s | %s inserted rows, %s failed cursors", quarter, relay, inserted, len(failed))
 
         logger.info("Finished %s with %s inserted rows", quarter, quarter_inserted)
     finally:
         conn.close()
+
+    return all_failed
 
 
 def main() -> None:
@@ -302,10 +332,11 @@ def main() -> None:
     logger = logging.getLogger("download_relay_data_quarters")
 
     for quarter, (slot_start, slot_end) in QUARTERS.items():
-        collect_quarter(
+        effective_slot_end = args.slot_end if args.slot_end is not None else slot_end
+        failed = collect_quarter(
             quarter=quarter,
             slot_start=slot_start,
-            slot_end=slot_end,
+            slot_end=effective_slot_end,
             output_dir=args.output_dir,
             table_name=args.table,
             limit=args.limit,
@@ -314,6 +345,17 @@ def main() -> None:
             sleep_seconds=args.sleep_seconds,
             logger=logger,
         )
+        if failed:
+            failed_path = os.path.join(args.output_dir, args.failed_slots_file)
+            existing: Dict[str, List[int]] = {}
+            if os.path.exists(failed_path):
+                with open(failed_path) as fh:
+                    existing = json.load(fh)
+            for key, slots in failed.items():
+                existing.setdefault(key, []).extend(slots)
+            with open(failed_path, "w") as fh:
+                json.dump(existing, fh, indent=2)
+            logger.info("Appended failed cursors to %s", failed_path)
 
     logger.info("All quarters finished. Databases are in %s", args.output_dir)
 
