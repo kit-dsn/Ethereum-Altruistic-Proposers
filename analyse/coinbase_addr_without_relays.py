@@ -3,6 +3,13 @@ Purpose
     Identifies blocks proposed without relay announcements for coinbase
     addresses used by other validators, and exports the block lists.
 
+Background
+    Two variants of the same query at different reuse thresholds: addresses
+    used by exactly one proposer (sql_query) vs. by fewer than ten
+    (sql_query2). Both ask, for blocks built with such an address, whether
+    that specific block ever shows up in relay_all - an early, per-block
+    version of the relay-overlap check coinbase_clusters.py later applies
+    at the cluster level.
 
 Outputs
     JSON files under out/ with block_number lists.

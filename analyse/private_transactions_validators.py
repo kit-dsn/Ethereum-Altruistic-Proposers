@@ -3,6 +3,14 @@ Purpose
     Summarizes validator inclusion of private transactions and relay usage
     via nested pie charts.
 
+Background
+    An early cross-tab of the two behavioral signals the formal funnel
+    later applies in sequence (proposer_collaboration.py for relay usage,
+    including_xof.py for private transactions): per validator, does it ever
+    include a private transaction, and does it ever use a relay - and how
+    do the two overlap? The inner ring is private-tx usage, the outer ring
+    splits each side further by relay usage.
+
 Outputs
     out/private_transactions_validators-pie-pubpriv-relay.pdf
 """

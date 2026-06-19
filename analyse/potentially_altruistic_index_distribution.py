@@ -3,6 +3,17 @@ Purpose
     Visualizes the proposer index distribution for potentially altruistic
     proposers and compares it to the overall proposer population.
 
+Background
+    Validator (proposer) indices are handed out sequentially as validators
+    are activated, so the index doubles as a rough join-date timeline - this
+    is what makes a histogram over proposer_index meaningful here, and why
+    MERGE_INDEX (the validator index count at the Merge) is drawn as a
+    reference line: it lets the figures show whether altruistic behavior
+    skews towards validators that joined before/after that transition.
+    "Potentially altruistic" (not_including_xof_proposers) is the lenient
+    including_xof.py group; "altruistic" (remaining_proposers) is the
+    stricter, ordering_clusters.py-filtered subset.
+
 Outputs
     Histogram PDFs in out/.
 """
@@ -19,7 +30,8 @@ import matplotlib.ticker as mtick
 mpl.rcParams['pdf.fonttype'] = 42
 mpl.rcParams['ps.fonttype'] = 42
 
-
+# validator index count at the Merge transition, used as a before/after
+# reference line in the figures below
 MERGE_INDEX = 428308
 
 
@@ -99,7 +111,11 @@ ax.set_ylabel("Number of potentially altruistic proposers")
 fig.savefig("out/potentially_altruistic_index_distribution-histogram.pdf")
 
 
-# calculate relative share
+# Recompute each bin's total proposer count from all_proposers (np.histogram
+# already gave us the altruistic counts per bin in `counts`) to turn counts
+# into a share. Boundaries are half-open [left, right) like np.histogram,
+# except the very last bin, which is closed on both ends so the single
+# proposer sitting exactly on max_index isn't dropped.
 rel_counts = []
 all_counts = []
 for i in range(1, len(bins)):

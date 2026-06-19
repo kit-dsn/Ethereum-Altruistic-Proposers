@@ -3,6 +3,13 @@ Purpose
     Analyzes transaction ordering metrics for non-relaying blocks and
     produces per-cluster summaries and an HTML overview.
 
+Background
+    Same gas-price ordering question as ordering_clusters.py, but here
+    aggregated per coinbase-address cluster (from proposer_clusters.py)
+    rather than per individual proposer/proposer-filter-stage - a coarser,
+    earlier-stage view that includes clusters later analyses go on to
+    exclude (e.g. for builder interaction or private tx usage).
+
 Outputs
     PDF histograms and out/ordering_non_pbs-overview.html.
 """
@@ -68,7 +75,6 @@ df_by_coinbase = utils.query.query_cache(f"""
         GROUP BY coinbase_addr
     """)
 
-# skip first cluster, that is lido
 df_clusters = []
 for cluster in coinbase_clusters[1:]:
     df_cluster = df_by_coinbase[df_by_coinbase.apply(lambda x: x['coinbase_addr'] in cluster, axis=1)].copy()
@@ -103,7 +109,9 @@ for cluster in coinbase_clusters[1:]:
 
 df_clusters = pd.DataFrame(df_clusters)
 df_clusters = df_clusters.sort_values(by='count', ascending=False).reset_index(drop=True)
-#assert df_clusters['count'].sum() == len(gas_spearman) # sanity check
+# df_clusters['count'].sum() does NOT equal len(gas_spearman): the latter is
+# over all non-relaying blocks, the former excludes the Lido cluster skipped
+# above, so this is intentionally left unasserted rather than a forgotten check
 
 
 fig, ax = plt.subplots(nrows=1, ncols=1)

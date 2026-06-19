@@ -3,6 +3,18 @@ Purpose
     Evaluates transaction ordering behavior for non-relaying proposers that
     do not include private transactions, and summarizes correlation metrics.
 
+Background
+    By this point a proposer has cleared every behavioral filter the
+    pipeline can apply (no relay, no contract coinbase, no builder
+    interaction, no private order flow). The remaining question is whether
+    it actually builds blocks itself in the naive way Ethereum assumed
+    proposers would: ordering transactions strictly by gas price. A
+    proposer with reordered transactions despite passing every earlier
+    filter would suggest a more sophisticated (and harder to detect) form
+    of MEV extraction, so this script splits proposers into "strictly
+    ordered" / "empty" / "remaining" and computes rank-correlation metrics
+    (Spearman/Kendall against gas price) only for the "remaining" group.
+
 Outputs
     Histogram PDFs and out/ordering_clusters.json.
 """
@@ -15,14 +27,6 @@ import numpy as np
 from itertools import chain
 import json
 import sys
-
-
-# Do the proposers that
-# - do not use MEV-Boost
-# - use EOAs as coinbase addresses
-# - don't interact with builders 
-# - and not include private transactions
-# reorder their transactions? Or are their transactions strictly ordered?
 
 with open("out/including_xof.json") as file:
     json_obj = json.load(file)
@@ -48,6 +52,10 @@ df_strictly_ordered = utils.query.query_cache(f"""
 """)
 
 
+# "Strictly descending" = every block this proposer ever built was ordered
+# purely by gas price - textbook non-MEV-aware building. "Empty" = blocks
+# with too few/identical-gas transactions to say anything either way.
+# Everything else ("remaining") gets the correlation treatment below.
 df_strictly_decending = df_strictly_ordered[df_strictly_ordered['block_count'] == df_strictly_ordered['strictly_decending_blocks']]
 df_empty_blocks = df_strictly_ordered[df_strictly_ordered['block_count'] == df_strictly_ordered['empty_blocks']]
 df_remaining = df_strictly_ordered[(df_strictly_ordered['block_count'] != df_strictly_ordered['strictly_decending_blocks']) & (df_strictly_ordered['block_count'] != df_strictly_ordered['empty_blocks'])]

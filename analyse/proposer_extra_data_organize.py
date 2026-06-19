@@ -3,6 +3,20 @@ Purpose
     Categorizes extra_data patterns across clusters and identifies common
     transitions and pre-release usage signals.
 
+Background
+    For each non-trivial cluster exported by proposer_extra_data.py, sort
+    its blocks by block_number and look at how extra_data changes over time.
+    A "global" pattern means every distinct extra_data value forms exactly
+    one contiguous run - e.g. the operator upgraded geth once and stuck with
+    the new version, a clean single-entity timeline. "Other" means the same
+    value reappears in separate, non-contiguous windows (interleaved with
+    something else), which looks more like alternating between multiple
+    machines/clients than one operator's upgrade history.
+    "pre-usage" flags a value whose parsed geth version (see
+    parse_extra_data) shows up *before* that version's real release block -
+    since that can't happen for a genuine client tag, it's a smell test for
+    a false-positive version parse rather than an actual finding.
+
 Outputs
     JSON summaries and per-pattern figures in out/.
 """
@@ -14,14 +28,13 @@ import json
 import utils.query
 import matplotlib.pyplot as plt
 
-# this script tries to detect a 'global' pattern
-# of extra data within the clusters
-
 result = {'other': [], 'global': [], 'global_patterns': [], 'pre-usage': []}
 
 with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
     geth_releases = json.load(file)
 
+# Same heuristic decoder as proposer_extra_data.py - see that file's comment
+# on parse_extra_data for what the 0xd8-0xda / byte-offset layout encodes.
 def parse_extra_data(x):
     if not isinstance(x, str) or not x.startswith('0x'):
         return None
@@ -37,7 +50,7 @@ def parse_extra_data(x):
             minor = b[3]
             patch = b[4]
             return f"{major}.{minor}.{patch}"
-    
+
     return None
 
 i = 0 # current cluster index
@@ -63,8 +76,8 @@ while os.path.exists(f"out/proposer_extra_data/coinbase-{i}.json"):
         ).reset_index(drop=True)
 
     
-        # when number changes equals number of extra_data values
-        # then we have a 'global' pattern (i.e., each extra_data value has a 'timeframe')
+        # one contiguous run per distinct value == each value owned its own
+        # timeframe with no interleaving -> "global" pattern (see Background)
         if len(changes) == len(blocks['extra_data'].unique()):
             result['global'].append(i)
             result['global_patterns'].append(changes)
@@ -97,17 +110,17 @@ with open("out/proposer_extra_data_organize-categories.json", "w") as file:
         'pre-usage': result['pre-usage']
     }))
 
-# take a look at the global patterns...
+# From here on we only look at the "global pattern" clusters: their
+# extra_data timelines are clean enough to ask which value commonly follows
+# which - if many independent clusters show the same A -> B transition
+# clustered around B's real geth release block, that's good evidence the
+# version parsing reflects genuine upgrades rather than noise.
 
 all_patterns = pd.concat(result['global_patterns'])
 all_patterns["pattern_index"] = (all_patterns.index == 0).cumsum()
 all_patterns = all_patterns.reset_index(drop=True)
 
 all_follow_ups = []
-
-## in which patterns did the extra_data appear?
-##print(all_patterns.groupby(by="extra_data")['pattern_index'].unique().apply(lambda x: len(x)).sort_values(ascending=False))
-##pidx = list(all_patterns[all_patterns['extra_data'] == extra_data]['pattern_index'].unique())
 
 for extra_data in all_patterns['extra_data'].unique():
     # what extra_data did follow?
@@ -172,9 +185,12 @@ for follow_idx, follow_up in all_follow_ups.iterrows():
 
 all_follow_ups.to_json('out/proposer_extra_data_organize-follow-ups.json')
 
-# did the extra_data appear in other blocks?
-# did they appear in other clusters?
-
+# An extra_data value that's a real client/version fingerprint should be
+# rare on the wider network too. For each value seen in a global pattern,
+# compare how many of its blocks come from our non-relaying proposer set
+# vs. from all proposers network-wide ("only_non_relaying_validators" below) -
+# a value used exclusively by non-relaying validators is a stronger signal
+# than one that's actually common stock-geth output everyone shares.
 non_relaying_proposers = pd.read_json('out/coinbase_clusters-non-relaying-proposer-coinbase.json')['proposer_index'].unique()
 
 

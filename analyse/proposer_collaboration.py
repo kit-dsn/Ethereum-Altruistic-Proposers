@@ -3,6 +3,14 @@ Purpose
     Characterizes relay usage by proposers, exports proposer/coinbase
     datasets, and generates relay-related figures.
 
+Background
+    This is the entry point for the paper's core distinction: a proposer is
+    bucketed as "never", "always" or "sometimes" relaying based on whether
+    the blocks it proposed ever show up in any relay's delivered-bid data
+    (relay_all). "Never relaying" is a necessary, but - as the later
+    coinbase_clusters.py / non_mev_coinbase_clusters_eoa_ca.py steps show -
+    not sufficient, condition for a proposer to count as altruistic.
+
 Outputs
     JSON exports and multiple PDF figures in out/.
 """
@@ -14,6 +22,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import utils.query
 import json
 
+# per-proposer block count, over every block it ever proposed
 df_all_proposer = utils.query.query_cache("""
     SELECT 
         proposer_index, 
@@ -23,6 +32,8 @@ df_all_proposer = utils.query.query_cache("""
     GROUP BY proposer_index 
     ORDER BY COUNT(slot) DESC
 """)
+# same, but restricted to blocks that also appear in relay_all - i.e. blocks
+# that were (at least nominally) built externally and delivered via a relay
 df_relay_proposer = utils.query.query_cache("""
     SELECT 
         proposer_index, 
@@ -34,7 +45,8 @@ df_relay_proposer = utils.query.query_cache("""
     ORDER BY COUNT(coinbase_blocks_all.slot) DESC
 """)
 
-
+# proposers absent from df_relay_proposer never had a single block go through
+# a relay - the "never relaying" group
 df_no_relay_proposer = df_all_proposer[~df_all_proposer.proposer_index.isin(df_relay_proposer.proposer_index)]
 df_relay_proposer = df_relay_proposer.rename(columns={"coinbase_addrs": "relay_coinbase_addrs", "slots": "relay_slots"})
 df_relay_proposer = df_relay_proposer.merge(df_all_proposer, left_on='proposer_index', right_on='proposer_index')
@@ -42,7 +54,8 @@ df_relay_proposer = df_relay_proposer.merge(df_all_proposer, left_on='proposer_i
 assert len(df_no_relay_proposer) + len(df_relay_proposer) == len(df_all_proposer)
 assert len(df_relay_proposer[df_relay_proposer['relay_slots'] > df_relay_proposer['slots']]) == 0
 
-# print diagram of validators
+# relay_slots == slots -> every block from this proposer went through a relay
+# ("always"); otherwise it relayed for some blocks but not others ("sometimes")
 y = np.array([
     len(df_no_relay_proposer), # does not use relays
     len(df_relay_proposer[df_relay_proposer['relay_slots'] == df_relay_proposer['slots']]), # always uses relays
@@ -78,6 +91,8 @@ with open('out/proposer_collaboration-overview.json', 'w') as file:
 df_sometimes_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots'] != df_relay_proposer['slots']]
 df_always_relay_proposer = df_relay_proposer[df_relay_proposer['relay_slots'] == df_relay_proposer['slots']]
 
+# per (proposer, coinbase) pair within the given proposer subset: how many
+# blocks used that coinbase, and how many of those went through a relay
 def fetch_coinbase_addrs_used(df):
     proposer_idx = ",".join(df.proposer_index.apply(str))
     return utils.query.query_cache(f"""
@@ -102,14 +117,19 @@ def fetch_coinbase_addrs_used(df):
         ORDER BY count DESC
     """)
 
-# find out which proposers used which coinbase addr
-# not showing up in relays...
-
+# Real proposer_index values are sparse validator-registry indices (can run
+# into the millions), which makes for an unreadable scatter x-axis. This
+# relabels them densely as 1..N within the given subset purely for plotting -
+# it must not be confused with the real validator index used everywhere else.
 def reorg_proposer_index(df):
     proposer_index_unique = list(df['proposer_index'].sort_values().unique())
     proposer_index_unique = dict(zip(proposer_index_unique, range(1, len(proposer_index_unique) + 1)))
     df['proposer_index'] = df.proposer_index.apply(lambda x: proposer_index_unique[x])
 
+# Ranks each coinbase address by how often it occurs (tied addresses share a
+# rank). Used below to color the scatter plot, so addresses reused across
+# many (proposer, coinbase) rows - a hint that several proposers funnel fees
+# to the same address - stand out visually from one-off addresses.
 def add_coinbase_reoccurence(df):
     vc = df['coinbase_addr'].value_counts().rename('rank')
     vc = vc.sort_values().unique()
@@ -117,8 +137,8 @@ def add_coinbase_reoccurence(df):
     vc = df['coinbase_addr'].value_counts().apply(lambda x: d[x]).rename("rank")
     return df.merge(vc, left_on="coinbase_addr", right_on="coinbase_addr")
 
-# plot these proposer - coinbase pairs
-
+# Running total across the three groups below, printed (not asserted) at the
+# end as a manual cross-check that it lines up with df_all_proposer.
 CHECK_COUNT = 0
 
 # sometimes relaying proposers
@@ -198,6 +218,12 @@ print(f"Sum slots: {df_no_relay_proposer.slots.sum() + df_sometimes_relay_propos
 # ============================
 # Dig deeper into no-relaying
 # ============================
+# "Never relaying" above was decided per proposer. Here we re-check at the
+# coinbase-address level instead: does a coinbase address used by a
+# never-relaying proposer ever show up in relay_all under any proposer at
+# all? If so, that address is not as private as the per-proposer view
+# suggested - exactly the gap that coinbase_clusters.py later closes by
+# clustering proposers through shared coinbase addresses.
 
 df = pd.read_json('out/proposer_collaboration-no-relaying-proposer-coinbase.json')
 

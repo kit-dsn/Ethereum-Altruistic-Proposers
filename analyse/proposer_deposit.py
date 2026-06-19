@@ -2,6 +2,15 @@
 Purpose
     Analyse whether proposer deposit addresses match coinbase clusters.
 
+Background
+    The address that originally deposited a validator's 32 ETH is usually
+    controlled by whoever actually owns the stake, whereas the coinbase
+    address a proposer later builds blocks with could belong to a delegated
+    operator instead. A coinbase cluster that overlaps with - or exactly
+    equals - its proposers' own deposit addresses is therefore extra
+    evidence that the same entity that staked is also the one self-building,
+    rather than having handed block construction off to someone else.
+
 Outputs
     out/proposer_deposit-results.json
 """
@@ -35,6 +44,9 @@ for idx, c in enumerate(non_relaying_clusters):
     proposers = non_relaying_clusters_proposer[idx]
     deposit_addrs = fetch_deposit_addr(proposers)
 
+    # list equality, so this only counts as a "full" match if the two
+    # addresses lists are also in the same order - in practice this mainly
+    # fires for single-address clusters, where order can't differ
     if c == deposit_addrs:
         matches.append(c)
     

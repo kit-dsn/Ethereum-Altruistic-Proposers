@@ -7,8 +7,10 @@ Usage
     python3 collectors/download_coinbase_v3.py -d <db> --key <api_key> --start <n> --end <n> <table>
 
 Notes
-    Requires a beaconcha.in API key. This path reduces CL RPC calls by
-    querying execution block mappings in bulk.
+    Requires a beaconcha.in API key. Where download_coinbase_v2.py spends a
+    CL round-trip per block, this batches 100 blocks into a single
+    beaconcha.in /execution/block/{ids} lookup, then cross-checks each
+    result's block number/hash against the EL header before trusting it.
 """
 
 import argparse

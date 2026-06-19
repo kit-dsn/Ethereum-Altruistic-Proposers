@@ -4,14 +4,18 @@ Purpose
     corrected table for migration purposes.
 
 Inputs
-    - out/recheck_coinbase-results.json
-    - DuckDB with coinbase_blocks
+    - out/recheck_coinbase-results.json (recheck_coinbase.py writes this
+      file to the working directory, not out/ - move/copy it there first)
+    - DuckDB with a coinbase_blocks table (the older, pre-"_all" name)
 
 Usage
     python3 collectors/recheck_coinbase_migrate.py
 
 Notes
     Uses local EL/CL endpoints; cached JSON output is reused if present.
+    One-off migration tool tied to a specific past data-quality fix: the
+    corrected rows land in a new coinbase_blocks_fixed table, which then has
+    to be merged into coinbase_blocks_all by hand.
 """
 
 import pandas as pd

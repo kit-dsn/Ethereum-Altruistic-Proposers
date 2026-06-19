@@ -3,6 +3,14 @@ Purpose
     Measures private-transaction usage across non-relaying coinbase
     clusters and renders a block-vs-private-tx scatter.
 
+Background
+    An earlier, coarser look at the same question including_xof.py answers
+    per individual proposer: does self-building still involve privately
+    routed order flow? Here it's broken down per coinbase cluster instead,
+    over the full non-relaying set (not yet narrowed to EOA-only / non-
+    builder-interacting proposers), to see how widespread the behavior is
+    before the later, stricter filters are applied.
+
 Outputs
     PDF scatter plot and out/private_transactions_clusters-overview.html.
 """
@@ -29,7 +37,6 @@ df_by_coinbase = utils.query.query_cache(f"""
 
 print(df_by_coinbase)
 
-# skip first cluster, that is lido
 df_clusters = []
 for cluster in coinbase_clusters[1:]:
     df_cluster = df_by_coinbase[df_by_coinbase.apply(lambda x: x['coinbase_addr'] in cluster, axis=1)].copy()

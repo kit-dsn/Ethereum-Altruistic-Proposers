@@ -3,6 +3,13 @@ Purpose
     Classifies non-relaying coinbase clusters into EOA or contract-address
     groups and summarizes proposer counts and contract types.
 
+Background
+    A non-relaying coinbase address could be a personal wallet (EOA) or a
+    smart contract (CA) - e.g. a staking-pool payout contract operated on
+    behalf of many validators. The latter says little about whether any
+    individual validator operator is acting altruistically, so later steps
+    (interacting_with_builders.py onward) focus on the EOA clusters only.
+
 Outputs
     out/non_mev_coinbase_clusters_eoa_ca.json
 """
@@ -41,8 +48,10 @@ for cluster in non_relaying_clusters:
 
 assert len(eoa_clusters) + len(ca_clusters) + len(mix) == len(non_relaying_clusters)
 
-# there are two clusters where proposers used both CAs and EOAs as coinbase addresses
-# decision: the proposers that sometimes use CAs should be grouped with CAs
+# A handful of clusters mix CA and EOA addresses (one proposer rotating
+# between both). Since a CA in the mix already means *some* of the cluster's
+# activity runs through pooled/contract infrastructure, we conservatively
+# group these with the CA clusters rather than the EOA ones.
 ca_clusters += mix
 
 assert len(eoa_clusters) + len(ca_clusters) == len(non_relaying_clusters)

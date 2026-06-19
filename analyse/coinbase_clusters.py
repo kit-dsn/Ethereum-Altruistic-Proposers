@@ -2,6 +2,18 @@
 Purpose
     Builds clusters of coinbase addresses among non-relaying proposers and
     exports proposer-coinbase counts.
+
+Background
+    A proposer that never lets its fee recipient (coinbase) show up in a
+    relay's bids is not necessarily building its own blocks - it may simply
+    be rotating between several private coinbase addresses while still
+    delegating construction to an external builder/relay off the record.
+    To tell the two apart we connect coinbase addresses that were ever paid
+    out to the same proposer into a graph and treat connected components as
+    one entity ("cluster"). A cluster only counts as genuinely non-relaying
+    if every address in it is non-relaying - a single relayed address pulls
+    the whole cluster (and thus the proposer) back into the "delegates to a
+    relay" bucket.
 """
 
 # depends_on: proposer_collaboration.py
@@ -13,7 +25,8 @@ import itertools
 import json
 
 
-# fetch all coinbase addresses and the associated number of blocks and relay blocks
+# Block count and relay-block count per coinbase address, used below to split
+# addresses into "ever seen in a relay bid" vs. "never seen in a relay bid".
 df_coinbases = utils.query.query_cache(f"""
         SELECT
             coinbase_addr,
@@ -43,7 +56,8 @@ df_coinbases = utils.query.query_cache(f"""
 
 df_no_relaying_coinbases = df_coinbases[df_coinbases['relay_count'] == 0]
 
-# fetch all proposers that used non-relaying-coinbase-addresses
+# proposers that ever used at least one of these non-relaying addresses -
+# the starting point for the cluster graph below
 proposers_using_non_relaying_coinbase = utils.query.query_cache(f"""
     SELECT
         DISTINCT proposer_index, coinbase_addr
@@ -55,7 +69,8 @@ proposers_using_non_relaying_coinbase = utils.query.query_cache(f"""
 
 assert len(proposers_using_non_relaying_coinbase['coinbase_addr'].unique()) == len(df_no_relaying_coinbases)
 
-# fetch all coinbases these proposers used
+# every coinbase address these proposers have *ever* used, relaying or not -
+# this is what gets connected into clusters below
 proposer_coinbases = utils.query.query_cache(f"""
     SELECT DISTINCT proposer_index, coinbase_addr
     FROM coinbase_blocks_all
@@ -64,7 +79,8 @@ proposer_coinbases = utils.query.query_cache(f"""
     )
 """)
 
-# make clusters
+# Union-find via networkx: two coinbase addresses are linked if the same
+# proposer was ever paid out to both of them.
 proposers_to_coinbase = defaultdict(set)
 for _, row in proposer_coinbases.iterrows():
     proposers_to_coinbase[row['proposer_index']].add(row['coinbase_addr'])
@@ -81,17 +97,20 @@ for coinbases in proposers_to_coinbase.values():
                 graph.add_edge(coinbases[i], coinbases[j])
 
 clusters = [] # only coinbase-addresses
-for idx, cluster in enumerate(nx.connected_components(graph)):
-    cluster = list(cluster)
-    clusters.append(cluster)
+for cluster in nx.connected_components(graph):
+    clusters.append(sorted(cluster))
 
-# go through all clusters, and check if they are still completely non-relaying...?
+# Keep only clusters where EVERY address is non-relaying. A cluster that
+# also contains a relaying address means the proposer(s) behind it do
+# delegate to a relay at least some of the time, so the whole cluster is
+# disqualified, not just the relaying address.
 non_relaying_clusters = []
 for cluster in clusters:
     if set(cluster) <= set(df_no_relaying_coinbases['coinbase_addr']):
         non_relaying_clusters.append(cluster)
-    
-# check again all non-relaying clusters:
+
+# Manual cross-check (inspected during development, not asserted here): re-run
+# the relay join per surviving cluster and confirm the count comes back zero.
 for cluster in non_relaying_clusters:
     df = utils.query.conn.execute(f"""
         SELECT COUNT(*) as count
@@ -130,15 +149,7 @@ df_proposer_coinbase = utils.query.query_cache(f"""
     GROUP BY proposer_index, coinbase_addr
 """)
 
-#assert df_proposer_coinbase["count"].sum() == df_coinbases[df_coinbases['coinbase_addr'].isin(all_non_relaying_coinbases)]["count"].sum()
-
-# check against our list of non-relaying proposers
 with open("out/proposer_collaboration-overview.json") as file:
     df = pd.DataFrame.from_dict(json.load(file)['non_relaying_proposers'])
-    #assert df_proposer_coinbase['proposer_index'].isin(df['proposer_index']).all()
-
-# check that number of blocks matches for each coinbase addr
-#for coinbase_addr in all_non_relaying_coinbases:
-#    assert df_proposer_coinbase[df_proposer_coinbase['coinbase_addr'] == coinbase_addr]['count'].sum() == df_coinbases[df_coinbases['coinbase_addr'] == coinbase_addr].iloc[0]['count']
 
 df_proposer_coinbase.to_json("out/coinbase_clusters-non-relaying-proposer-coinbase.json")

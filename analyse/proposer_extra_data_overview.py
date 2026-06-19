@@ -3,6 +3,14 @@ Purpose
     Produces an HTML overview of extra_data behavior across non-relaying
     coinbase clusters, including global vs non-global patterns.
 
+Background
+    Mostly a presentation layer over proposer_extra_data.py and
+    proposer_extra_data_organize.py - see those files for what "trivial",
+    "global pattern" and "pre-usage" actually mean. The one thing computed
+    fresh here is the richer extra_data decoder below, which additionally
+    pulls out the client/Go-version/OS strings geth embeds alongside the
+    version triple.
+
 Outputs
     out/proposer_extra_data_overview.html and linked assets.
 """
@@ -122,6 +130,12 @@ htmlOut += f"""
 
 global_coinbase = non_trivial_cases.iloc[global_positions]
 other_coinbase = non_trivial_cases.iloc[other_positions]
+# Assumes position 0 of the "other" (non-global) cases is Lido. Unlike the
+# positional Lido-skip in ordering_non_pbs.py/private_transactions_clusters.py,
+# `other_positions` comes from a manually curated category list rather than
+# an automatic, size-based cluster ordering, so it is not subject to the same
+# "index 0 is no longer the largest cluster" staleness risk - but it is still
+# only as correct as that manual curation.
 other_without_lido = other_coinbase[1:]
 
 htmlOut += f"""
@@ -168,8 +182,11 @@ def parse_extra_data(x):
         return None
 
     if (len(b) > 0):
+        # 0xd8/0xd9/0xda are RLP short-list prefixes (0xc0 + payload length);
+        # the payload is [major, minor, patch, client, go-version, os], where
+        # client/go-version are themselves RLP short strings (prefix byte
+        # 0x80 + length, hence "- 0x80" below) and os runs to the end.
         if b[0] == 0xd8 or b[0] == 0xda or b[0] == 0xd9:
-            # this is a geth extra_data
             major = b[2]
             minor = b[3]
             patch = b[4]
@@ -182,7 +199,7 @@ def parse_extra_data(x):
             os = b[goversion_end+1:]
 
             return (f"{major}.{minor}.{patch}", client, goversion, os)
-    
+
     return None
 
 # parsing geth version strings

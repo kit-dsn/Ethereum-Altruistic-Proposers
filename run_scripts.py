@@ -26,7 +26,7 @@ import sys
 from collections import defaultdict, deque
 
 SCRIPT_DIR = 'analyse'
-DEFAULT_DB_PATH = '/data/fast/historical_mempools/altruistic_proposers/q1.duckdb'
+DEFAULT_DB_PATH = '/data/fast/historical_mempools/altruistic_proposers/2025_overall.duckdb'
 DB_ENV_VAR = 'ANALYSE_DUCKDB_PATH'
 
 def parse_dependencies():

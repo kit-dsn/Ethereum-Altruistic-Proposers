@@ -2,14 +2,27 @@
 Purpose
     Generates cluster-size distribution for EOA coinbase clusters
     with relay fraction overlays.
+
+Background
+    "Cluster size" here is the coarse validator_count-per-coinbase-address
+    reuse metric (see coinbase_addr_distribution.py), restricted to EOA
+    addresses, not the graph-based clusters from coinbase_clusters.py. The
+    scatter point color flags whether a cluster size bucket leans relayed
+    (gray, all relayed), mixed (red), or essentially never relayed (blue);
+    the shaded area is the cumulative share of all blocks accounted for up
+    to that cluster size.
 """
 
 import pandas as pd
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import json
 import utils.query
+
+mpl.rcParams['pdf.fonttype'] = 42
+mpl.rcParams['ps.fonttype'] = 42
 
 # first analyze EOA coinbase addresses
 df = utils.query.query_cache("""

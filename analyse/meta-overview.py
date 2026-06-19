@@ -3,6 +3,21 @@ Purpose
     Generates an HTML meta-overview that aggregates key results across
     analysis steps for reporting or paper drafting.
 
+Background
+    This is the final step of the funnel and doesn't compute anything new -
+    it re-reads every intermediate JSON file produced earlier in the
+    pipeline and lays the narrowing counts out as one drill-down report:
+
+        all proposers
+        -> never relaying (proposer_collaboration.py)
+        -> clustered by shared coinbase address, EOA vs. CA (coinbase_clusters.py / non_mev_coinbase_clusters_eoa_ca.py)
+        -> EOA clusters not interacting with builders (interacting_with_builders.py)
+        -> not including private order flow ("potentially altruistic" / "altruistic", including_xof.py)
+        -> not exhibiting reordering behavior beyond gas-price sorting (ordering_clusters.py)
+
+    Each "%" column below is always relative to the same total_num_proposers,
+    so the numbers compose into the paper's headline funnel directly.
+
 Outputs
     HTML report.
 """
@@ -370,6 +385,8 @@ with open('out/ordering_clusters.json') as file:
     </details>
 """
 
+# same before/after-Merge split as potentially_altruistic_index_distribution.py,
+# printed here as plain numbers rather than plotted
 MERGE_INDEX = 428308
 
 pot_before = [p for p in not_including_xof_proposers if p < MERGE_INDEX]
@@ -377,6 +394,10 @@ pot_after  = [p for p in not_including_xof_proposers if p >= MERGE_INDEX]
 alt_before = [p for p in remaining_proposers if p < MERGE_INDEX]
 alt_after  = [p for p in remaining_proposers if p >= MERGE_INDEX]
 
+# FIRST_BIN_MAX/LATE_BIN_MIN/LATE_BIN_MAX call out two specific validator-index
+# ranges of interest (the earliest validators, and a later high-density range)
+# for a textual breakdown alongside the full histogram in
+# potentially_altruistic_index_distribution.py
 FIRST_BIN_MAX = 41_934
 LATE_BIN_MIN  = 1_000_000
 LATE_BIN_MAX  = 2_096_647
@@ -389,9 +410,31 @@ print(f"  before Merge (index < {MERGE_INDEX}): {len(pot_before)}")
 print(f"  after  Merge (index >= {MERGE_INDEX}): {len(pot_after)}")
 print(f"  first bin (index < {FIRST_BIN_MAX}): {len(pot_first_bin)}")
 print(f"  late bin ({LATE_BIN_MIN} <= index <= {LATE_BIN_MAX}): {len(pot_late_bin)}")
+
+BIN_SIZE = 50_000
+all_pot = sorted(not_including_xof_proposers)
+if all_pot:
+    max_idx = all_pot[-1]
+    print(f"  --- bins of {BIN_SIZE:,} ---")
+    for bin_start in range(0, max_idx + BIN_SIZE, BIN_SIZE):
+        bin_end = bin_start + BIN_SIZE - 1
+        cnt = sum(1 for p in not_including_xof_proposers if bin_start <= p <= bin_end)
+        if cnt > 0:
+            print(f"  [{bin_start:>8,} – {bin_end:>8,}]: {cnt:>5,}")
+
 print(f"Altruistic proposers (remaining): {len(remaining_proposers)} total")
 print(f"  before Merge (index < {MERGE_INDEX}): {len(alt_before)}")
 print(f"  after  Merge (index >= {MERGE_INDEX}): {len(alt_after)}")
+
+all_alt = sorted(remaining_proposers)
+if all_alt:
+    max_idx = all_alt[-1]
+    print(f"  --- bins of {BIN_SIZE:,} ---")
+    for bin_start in range(0, max_idx + BIN_SIZE, BIN_SIZE):
+        bin_end = bin_start + BIN_SIZE - 1
+        cnt = sum(1 for p in remaining_proposers if bin_start <= p <= bin_end)
+        if cnt > 0:
+            print(f"  [{bin_start:>8,} – {bin_end:>8,}]: {cnt:>5,}")
 
 with open("out/meta-overview.html", "w") as file:
     file.write(htmlOut)

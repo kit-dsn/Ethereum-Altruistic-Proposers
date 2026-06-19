@@ -1,7 +1,18 @@
 """
 Purpose
-    Builds connections betweencoinbase addresses used by non-relaying
-    proposers, producing cluster.
+    Builds connections between coinbase addresses used by non-relaying
+    proposers, producing clusters.
+
+Background
+    Same clustering idea as coinbase_clusters.py (connect coinbase addresses
+    sharing a proposer, take connected components), applied here to the
+    never-relaying proposer set from proposer_collaboration.py instead of
+    the broader non-relaying-coinbase set. ordering_non_pbs.py and
+    private_transactions_clusters.py both treat the first entry of the
+    exported cluster list as a known large entity (Lido) and skip it -
+    the cluster ORDER is stable across runs (it follows the DataFrame's
+    column order, not a hashed set), only the address order WITHIN each
+    cluster is sorted below for the same reason as in coinbase_clusters.py.
 """
 
 # depends_on: proposer_collaboration.py
@@ -35,7 +46,9 @@ con_components = nx.connected_components(graph)
 results = [] # dataframes
 clusters = [] # only coinbase-addresses
 for idx, cluster in enumerate(con_components):
-    cluster = list(cluster)
+    # sort: connected_components yields a plain set, whose iteration order is
+    # subject to Python's hash-seed randomization for strings
+    cluster = sorted(cluster)
     clusters.append(cluster)
     if len(cluster) > 1:
         print(f"Cluster {idx}: {cluster}")

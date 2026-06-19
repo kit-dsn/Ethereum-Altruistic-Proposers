@@ -7,7 +7,9 @@ Usage
     python3 collectors/recheck_coinbase.py -d <db> --start <n> --end <n> <table>
 
 Outputs
-    recheck_coinbase-results.json with block_number, saved, correct.
+    recheck_coinbase-results.json (in the current working directory, not
+    out/) with block_number, saved, correct - the mismatches are then
+    re-downloaded by recheck_coinbase_migrate.py.
 """
 
 import argparse

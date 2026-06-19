@@ -3,6 +3,12 @@ Purpose
     Computes the share of blocks announced via relays and visualizes it as
     a pie chart.
 
+Background
+    The headline "most proposers delegate to relays" figure in its rawest
+    form: what fraction of ALL blocks (not yet split by proposer or
+    clustered) show up in relay_all at all. Everything downstream of
+    proposer_collaboration.py refines this same question per proposer.
+
 Outputs
     out/relay_proportion-bar-chart.pdf
 """

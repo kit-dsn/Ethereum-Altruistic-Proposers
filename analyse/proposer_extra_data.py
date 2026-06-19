@@ -3,6 +3,20 @@ Purpose
     Examines extra_data usage within non-relaying coinbase clusters and
     renders per-cluster timelines and exports.
 
+Background
+    `extra_data` is the free-form header field clients like geth fill with a
+    version string by default. Within a cluster (several coinbase addresses
+    tied together via a shared proposer), the *pattern* of extra_data values
+    over time is informative: if every proposer_index in the cluster has its
+    own single extra_data value, that's just N independent operators running
+    default client settings - no extra signal. But if extra_data values are
+    shared across different proposer_index values, or a single proposer
+    cycles through several, that hints at one physical operator behind
+    several "different" validators, or visible infrastructure changes
+    (client upgrades) over time. The mask below keeps exactly the
+    non-trivial cases and renders a block-number-vs-proposer scatter, colored
+    by extra_data, for manual inspection.
+
 Outputs
     out/proposer_extra_data/* files and proposer_extra_data-overall.json.
 """
@@ -15,8 +29,6 @@ import os.path
 import matplotlib.pyplot as plt
 import numpy as np
 from binascii import crc32
-
-# which extra data do non-relaying proposers use?
 
 if not os.path.isfile('out/proposer_extra_data-overall.json'):
     coinbase_clusters = []
@@ -54,7 +66,10 @@ else:
 with open(f"analyse/proposer_extra_data_organize_geth_releases.json") as file:
     geth_releases = json.load(file)
 
-# parsing geth version strings
+# Default geth builds tag extra_data with a short binary header starting in
+# 0xd8-0xda, followed by a (major, minor, patch) version triple at a fixed
+# offset; this only decodes that one specific layout and returns None for
+# anything else (different client, or a non-default extra_data value).
 def parse_extra_data(x):
     if not isinstance(x, str) or not x.startswith('0x'):
         return None
@@ -70,11 +85,12 @@ def parse_extra_data(x):
             minor = b[3]
             patch = b[4]
             return f"{major}.{minor}.{patch}"
-    
+
     return None
 
-# draw a scatterplot with changes of extra_data
-# df = result_df[result_df['num_blocks'] > 50].sort_values(by='num_proposers', ascending=False)
+# keep clusters with >1 proposer AND >1 extra_data value, but drop the
+# trivial case where num_extra_data == num_proposers (each proposer simply
+# has its own one default value - see Background above)
 mask = (
     (result_df['num_proposers'] > 1)
     & (result_df['num_extra_data'] > 1)

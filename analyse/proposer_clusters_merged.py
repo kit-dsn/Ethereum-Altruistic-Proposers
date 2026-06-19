@@ -3,6 +3,13 @@ Purpose
     Maps non-relaying coinbase clusters to their associated proposers and
     exports merged cluster-proposer lists.
 
+Background
+    proposer_clusters.py only exports the coinbase-address side of each
+    cluster. This re-attaches the proposer_index values behind those
+    addresses (from proposer_collaboration.py's never-relaying set) so
+    downstream scripts (proposer_deposit.py) can go cluster -> proposers
+    directly instead of re-joining the two files themselves.
+
 Outputs
     out/proposer_clusters_merged.json
 """

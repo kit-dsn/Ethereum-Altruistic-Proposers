@@ -1,7 +1,8 @@
 """
 Purpose
-    Imports private transaction data for Q1 (blocks 21525891-22170334) from the
-    central private_transactions.duckdb into q1.duckdb.
+    Imports private transaction data for one quarter from the central
+    private_transactions.duckdb into that quarter's own database, by block
+    range. 
 
     Creates two tables as expected by the analysis scripts:
 

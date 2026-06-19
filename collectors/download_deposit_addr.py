@@ -9,6 +9,11 @@ Usage
 Notes
     Requires a beaconcha.in API key and a local CL endpoint for validator
     pubkeys. Validators are processed in chunks to respect API limits.
+    Reads its list of validators straight out of coinbase_blocks_all
+    (DISTINCT proposer_index), so coinbase data has to be loaded into the
+    target database before this can run. proposer_deposit.py is the
+    consumer: it compares each proposer's deposit from_address against the
+    coinbase address(es) it later built blocks with.
 """
 
 import argparse

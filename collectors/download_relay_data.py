@@ -8,7 +8,11 @@ Usage
 
 Notes
     Implements retry-on-failure with backoff. Data are inserted incrementally
-    to allow long-range collection runs.
+    to allow long-range collection runs. Single relay, single database -
+    download_relay_data_quarters.py is the batch version of this idea that
+    loops over every relay below and all four quarterly databases at once;
+    download_titan_relay.py is a narrower re-run of just the Titan relay for
+    when that one gets rate-limited mid-batch.
 
 Relay providers queried in this study:
     - https://aestus.live

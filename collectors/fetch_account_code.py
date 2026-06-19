@@ -8,7 +8,9 @@ Usage
 
 Notes
     Uses eth_getCode on a local EL endpoint. Inserts are batched to reduce
-    write overhead.
+    write overhead. is_account=True means "no code" (EOA), False means
+    "has code" (contract/CA) - the naming is a bit counterintuitive since
+    both EOAs and contracts are technically accounts.
 """
 
 import requests

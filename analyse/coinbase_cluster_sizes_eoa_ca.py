@@ -135,11 +135,12 @@ for ccl in contract_clusters:
 
 df_cac = pd.DataFrame(df_ca_cluster)
 df_cac = df_cac.sort_values(by='validator_count')
-#assert df_cac['block_count'].sum() == df_ca['block_count'].sum()
-#assert df_cac['validator_count'].sum() == df_ca['validator_count'].sum()
-#assert df_cac['relay_block_count'].sum() == df_ca['relay_block_count'].sum()
-
-df_cac.to_csv('/tmp/cac.csv')
+# Only CA addresses mentioned in contract-cluster.json end up in df_cac at
+# all - anything not listed there is silently absent from the "cac" plot
+# below, not counted as its own size-1 cluster. block_count/validator_count/
+# relay_block_count sums over df_cac would only equal the df_ca sums if that
+# manual file covered every CA address.
+df_cac.to_csv('/tmp/cac.csv')  # debug dump outside out/; not part of the regular output set
 
 groupby_cluster_size_cac = df_cac.groupby('validator_count')
 cluster_sizes_cac = groupby_cluster_size_cac['coinbase_addr'].count()

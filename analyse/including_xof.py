@@ -2,6 +2,17 @@
 Purpose
     Identifies proposers in non-interacting EOA clusters that include
     private transactions (XOF) and exports the proposer lists.
+
+Background
+    "XOF" = eXternal Order Flow: transactions that never appeared in the
+    public mempool, i.e. were routed privately to the proposer. A handful of
+    such transactions could just be ordinary private-RPC usage by end users,
+    but a proposer that regularly includes externally-sourced order flow is
+    arguably still benefiting from the same kind of preferential deal-making
+    that MEV-Boost was meant to formalize - even while self-building. We
+    therefore tighten the altruism criterion further here: clusters get
+    split by whether they ever exceed a small private-tx tolerance, and a
+    strict "zero private transactions, ever" subset is reported separately.
 """
 
 # depends_on: interacting_with_builders.py
@@ -12,10 +23,10 @@ from datetime import datetime, UTC
 from itertools import chain
 from utils.query import query_cache
 
+# blocks with at most this many private transactions are still considered
+# "clean" for the (lenient) including_xof_proposers/not_including_xof_proposers
+# split below; the separate altruistic_proposers set tolerates none at all
 MAX_PRIVATE_TX_WITHOUT_EXCLUSION = 1
-
-# For the proposers not interacting with builders, which
-# do include XOF? And how many?
 
 with open("out/interacting_with_builder.json") as file:
     non_interacting_eoa_clusters = json.load(file)['non_interacting_eoa_clusters']

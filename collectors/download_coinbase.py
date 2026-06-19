@@ -11,6 +11,11 @@ Usage
 Notes
     Reads block numbers from relay payload data (table relay_payloads) for the
     requested quarter slot ranges and fills the corresponding q1-q4 databases.
+    Unlike download_coinbase_v2.py/_v3.py (which walk a fixed --start/--end
+    block range and need a public beacon API or beaconcha.in), this one only
+    ever looks up blocks relay_payloads already knows about and resolves
+    their CL header against a local node - so it can only ever produce
+    coinbase data for blocks that were also seen by a relay.
 """
 
 import argparse

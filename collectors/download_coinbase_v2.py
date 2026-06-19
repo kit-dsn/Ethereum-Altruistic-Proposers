@@ -10,6 +10,13 @@ Usage
 Notes
     Uses a public beacon API; rate limits and availability may affect
     throughput. Blocks are uploaded in batches.
+
+    One CL round-trip per block (walking parentBeaconBlockRoot, then
+    re-fetching the full beacon block just to assert its extra_data/
+    block_number match the EL side) is the throughput bottleneck this
+    script has - download_coinbase_v3.py replaces it with beaconcha.in's
+    bulk execution-block-mapping endpoint instead of removing the per-block
+    CL call here, which is why v3 needs an API key and this one doesn't.
 """
 
 import argparse

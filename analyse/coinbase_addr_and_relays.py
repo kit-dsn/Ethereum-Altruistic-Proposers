@@ -2,6 +2,14 @@
 Purpose
     Relates coinbase address reuse to relay usage and visualizes cluster
     sizes and relay fractions across validator groups.
+
+Background
+    Same coarse "validator_count per coinbase address" reuse metric as
+    coinbase_addr_distribution.py (not the graph-based clustering used
+    later), now colored by what fraction of each address's/group's blocks
+    were actually relayed - i.e. does heavier address reuse correlate with
+    heavier relay usage? The 8.9% reference line is the same literature
+    figure as in coinbase_addr_distribution.py.
 """
 
 import pandas as pd

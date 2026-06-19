@@ -3,6 +3,14 @@ Purpose
     Quantifies reuse of coinbase addresses across validators and produces
     distribution plots and a list of unique coinbase addresses.
 
+Background
+    An early, coarse look at the same reuse question coinbase_clusters.py
+    later answers properly via graph clustering: here, "reuse" is just
+    "how many distinct proposer_index values share this one coinbase
+    address", with no attempt to chain addresses together through shared
+    proposers. The 8.9% reference line marks the literature's "9% of
+    proposers don't delegate to relays" figure for visual comparison.
+
 Outputs
     PDF figures and out/coinbase_addr_distribution-unique-coinbase-addrs.json.
 """
@@ -98,7 +106,7 @@ cdf_normalized = cdf / cdf.iloc[-1]
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 ax.plot(cdf_normalized.index, cdf_normalized.values, marker='o')
-ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)
+ax.axhline(y=0.089, color='blue', linestyle='--', linewidth=1)  # see Background: literature's ~9% non-delegating figure
 ax.axvline(x=cdf_normalized[cdf_normalized >= 0.089].index[0], color='blue', linestyle='--', linewidth=1)
 ax.set_xscale('log')
 fig.savefig("out/coinbase_addr_distribution-line-chart.pdf")

@@ -2,6 +2,14 @@
 Purpose
     Summarizes relay usage for blocks whose coinbase address is unique per
     validator, using outputs from the distribution analysis.
+
+Background
+    A first sanity check on the coinbase_addr_distribution.py "unique
+    addresses" set: if an address is genuinely only used by one validator,
+    do its blocks still occasionally show up via a relay? If so, "unique
+    coinbase address" alone isn't proof of self-building either - the same
+    gap that motivates the proper graph-based clustering in
+    coinbase_clusters.py.
 """
 
 # depends_on: coinbase_addr_distribution.py

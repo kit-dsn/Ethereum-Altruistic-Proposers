@@ -15,14 +15,18 @@ from datetime import datetime, UTC
 from itertools import chain
 from utils.query import query_cache
 
-# Looking for non-MEV EOA clusters that are interacting with builders.
-# This includes two types:
-#   1) non-MEV-Boost proposers that build blocks with the coinbase address,
-#      but include private transactions from/to builders
-#   2) In a cluster, we only have proposers that use the coinbase address for block building.
-#      However, there could be other proposers that only issued blocks via MEV-Boost/Relays
-#      and had the coinbase address as "proposer_fee_recipient" (i.e.: they include a private
-#      transaction from builder to coinbase address)
+# An EOA cluster surviving this far never used MEV-Boost/a relay directly,
+# but that alone doesn't rule out a quieter form of delegation. We check two
+# ways a cluster could still be entangled with builders despite that:
+#   1) Some of its self-built blocks contain a private (non-public-mempool)
+#      transaction to/from a known builder address - the proposer may be
+#      selling order flow or accepting payment off-chain rather than via the
+#      on-chain coinbase/relay path.
+#   2) The same coinbase address shows up as the "proposer_fee_recipient" a
+#      relay announces for an *externally* (relay-)built block elsewhere -
+#      i.e. some other validator/operator paid out to this very address via
+#      MEV-Boost, which only makes sense if the address is tied to an entity
+#      that also participates in the MEV-Boost market.
 
 # get clusters
 with open("out/non_mev_coinbase_clusters_eoa_ca.json") as file:

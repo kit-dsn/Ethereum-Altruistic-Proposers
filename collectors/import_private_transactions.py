@@ -22,6 +22,11 @@ Purpose
           script can resume safely after a crash.
         - Indexes are created after all data is loaded.
 
+    This only populates the central private_transactions table. The
+    analyse/ pipeline expects mempool_private/private_blocks instead - a
+    second, per-quarter aggregation step pulls the relevant block range out
+    of here into that shape (see import_private_transactions_q1.py).
+
 Usage
     python3 collectors/import_private_transactions.py
     python3 collectors/import_private_transactions.py \

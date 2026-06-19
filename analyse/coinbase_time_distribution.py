@@ -3,6 +3,13 @@ Purpose
     Measures temporal distribution (block numbers) of blocks produced by
     coinbase addresses used by few validators.
 
+Background
+    Same low-reuse coinbase addresses as coinbase_addr_without_relays.py, but
+    here just plotted over time (block number) to see whether this behavior
+    is spread evenly across the observation window or concentrated in a
+    particular period (which would suggest a one-off event rather than a
+    persistent pattern).
+
 Outputs
     Histogram PDF and JSON block lists in out/.
 """
