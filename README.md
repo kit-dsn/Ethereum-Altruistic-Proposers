@@ -8,7 +8,15 @@ Modifications and contact person: Patrick Spiesberger (patrick.spiesberger@kit.e
 
 ## Abstract
 
-Ethereum's ideals of decentralization and censorship resistance are undermined in practice, motivating ongoing efforts to reestablish these properties. Existing proposals for fairness mechanisms depend on the assumption that a sufficient fraction of block proposers adhere to Ethereum's protocols as intended. We refer to such proposers as altruistic, as this behavior may come at the cost of reduced revenue. Prior analyses indicate that a consistent share of 91 percent of proposers delegate block construction to centralized services, effectively signing externally constructed blocks blindly, and are thus not considered altruistic. To assess whether the remaining 9 percent of proposers exhibit genuinely altruistic behavior, we conducted an empirical analysis and found that an additional 6.1 percent also interact with such external services. Further, we found that less than 1.4 percent of proposers consistently acted in accordance with Ethereum's decentralization and censorship resistance objectives. These findings suggest that relying solely on the mere presence of altruistic proposers is insufficient for ensuring that the proposed fairness mechanisms can reestablish Ethereum's ideals, highlighting the need for additional incentive- or penalty-based mechanisms.
+Ethereum's ideal of censorship resistance, along with other fairness properties, is undermined in practice, motivating fairness mechanisms designed to restore them.
+Recent proposals rely on a 1-of-n honest assumption: at least one proposer follows such a mechanism even when deviation would increase personal revenue.
+We refer to such proposers as altruistic.
+Prior work, however, shows that approximately 91 % of blocks were constructed by centralized block-building services that demonstrably carry out user-adverse actions for financial gain.
+The proposers the protocol holds responsible for these blocks sign them blindly, without any possibility of intervention, which gives rise to the common assumption that 9 % of proposers forgo these gains and act altruistically.
+Our empirical analysis of the full year 2025 finds that this share is substantially smaller: at most 1.4 % could plausibly be considered altruistic, while 98.6 % of proposers depend on these centralized builders.
+We interpret this share of 1.4 % as an upper bound on the prevalence of altruistic proposers.
+These results imply that committee-based fairness mechanisms that rely on altruistic members would require substantially larger committees than currently proposed.
+This raises concerns about their practical viability and motivates mechanisms in which fair behavior is the rational choice.
 
 ## Repository Structure
 
