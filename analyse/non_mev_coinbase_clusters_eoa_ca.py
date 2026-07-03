@@ -6,9 +6,10 @@ Purpose
 Background
     A non-relaying coinbase address could be a personal wallet (EOA) or a
     smart contract (CA) - e.g. a staking-pool payout contract operated on
-    behalf of many validators. The latter says little about whether any
-    individual validator operator is acting altruistically, so later steps
-    (interacting_with_builders.py onward) focus on the EOA clusters only.
+    behalf of many validators. This script exports both groups separately;
+    interacting_with_builders.py decides (via its INCLUDE_CA_CLUSTERS flag,
+    on by default) whether CA clusters continue through the rest of the
+    pipeline alongside the EOA ones.
 
 Outputs
     out/non_mev_coinbase_clusters_eoa_ca.json

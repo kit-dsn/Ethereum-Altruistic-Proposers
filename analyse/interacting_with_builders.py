@@ -1,6 +1,6 @@
 """
 Purpose
-    Detects non-MEV EOA clusters that interact with builders via private
+    Detects non-MEV clusters that interact with builders via private
     transactions or as relay fee recipients.
 
 Outputs
@@ -14,6 +14,11 @@ import numpy as np
 from datetime import datetime, UTC
 from itertools import chain
 from utils.query import query_cache
+
+# Whether to include contract-address (CA) coinbase clusters (e.g. staking-
+# pool payout contracts) alongside EOA clusters in the analysis below.
+# Default True: CA clusters are NOT excluded.
+INCLUDE_CA_CLUSTERS = True
 
 # An EOA cluster surviving this far never used MEV-Boost/a relay directly,
 # but that alone doesn't rule out a quieter form of delegation. We check two
@@ -30,7 +35,10 @@ from utils.query import query_cache
 
 # get clusters
 with open("out/non_mev_coinbase_clusters_eoa_ca.json") as file:
-    eoa_clusters = json.load(file)['eoa_clusters']
+    json_obj = json.load(file)
+    eoa_clusters = json_obj['eoa_clusters']
+    if INCLUDE_CA_CLUSTERS:
+        eoa_clusters = eoa_clusters + json_obj['ca_clusters']
 
 
 # Part 1: Clusters with private transactions to/from builders
@@ -117,10 +125,14 @@ for c in eoa_clusters:
     if c not in clusters_appearing_as_fee_recipient and c not in clusters_with_builder_xofs:
         non_interacting_clusters.append(c)
 
-assert len(non_interacting_clusters) + len(clusters_appearing_as_fee_recipient) + len(clusters_with_builder_xofs) == len(eoa_clusters)
+# A cluster can trigger both the private-builder-tx and the fee-recipient
+# check at once, so the two "interacting" lists aren't guaranteed disjoint -
+# count their union, not their sum, when checking the partition against
+# non_interacting_clusters.
+interacting_clusters = {tuple(c) for c in clusters_appearing_as_fee_recipient} | {tuple(c) for c in clusters_with_builder_xofs}
+assert len(non_interacting_clusters) + len(interacting_clusters) == len(eoa_clusters)
 assert len(set(chain(*non_interacting_clusters)) & set(chain(*clusters_appearing_as_fee_recipient))) == 0
 assert len(set(chain(*non_interacting_clusters)) & set(chain(*clusters_with_builder_xofs))) == 0
-assert len(set(chain(*clusters_appearing_as_fee_recipient)) & set(chain(*clusters_with_builder_xofs))) == 0
 
 with open('out/interacting_with_builder.json', 'w') as file:
     json.dump({
