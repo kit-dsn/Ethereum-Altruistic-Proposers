@@ -80,7 +80,11 @@ with open('out/including_xof.json') as file:
 
 with open('out/ordering_clusters.json') as file:
     json_obj = json.load(file)
-    altruistic_proposers = json_obj['remaining_proposers']
+    # Classifier VII keeps only proposers whose ordering is verifiably
+    # content-independent (always strictly descending, or trivially empty);
+    # "remaining_proposers" is the group excluded for lack of verifiability,
+    # not the altruistic set itself - see the classifier VII description.
+    altruistic_proposers = json_obj['strictly_decending_proposers'] + json_obj['empty_block_proposer']
 
 min_index = all_proposers['proposer_index'].min()
 max_index = all_proposers['proposer_index'].max()
